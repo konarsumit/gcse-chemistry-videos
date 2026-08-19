@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.J. Thomson's discovery of the electron</title>
+<style>
+  :root{
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --border: #ddd9cf;
+    --text: #2b2a27;
+    --muted: #6f6d64;
+    --accent: #D4537E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:32px 16px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:24px;font-weight:600;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 28px;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:24px;
+  }
+
+  .controls{display:flex;align-items:center;gap:12px;margin-top:14px;}
+  button{
+    border:1px solid var(--border);
+    background:var(--text);
+    color:#fff;
+    border-radius:8px;
+    padding:9px 18px;
+    font-size:14px;
+    cursor:pointer;
+  }
+  button:active{transform:scale(0.98);}
+  .hint{font-size:12px;color:var(--muted);}
+
+  h2{font-size:17px;font-weight:600;margin:0 0 10px;}
+  p{font-size:15px;line-height:1.7;margin:0 0 14px;}
+  ul{margin:0 0 14px;padding-left:20px;font-size:15px;line-height:1.7;}
+
+  .t{font-size:14px;fill:var(--text);font-family:inherit;}
+  .ts{font-size:12px;fill:var(--muted);font-family:inherit;}
+  .th{font-size:14px;font-weight:600;fill:var(--text);font-family:inherit;}
+
+  @keyframes flow {
+    0% { transform: translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateX(400px); opacity: 0; }
+  }
+  @keyframes pulseglow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .electron { animation: flow 1.4s linear infinite; }
+  .electron.off { animation-play-state: paused; opacity: 0; }
+  .glow { animation: pulseglow 1.4s ease-in-out infinite; transition: opacity .4s; }
+  .glow.off { opacity: 0; animation: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How J.J. Thomson discovered the electron</h1>
+  <p class="sub">An animated look at the 1897 cathode ray tube experiment</p>
+
+  <div class="card">
+    <svg width="100%" viewBox="0 0 680 320" role="img" aria-label="Diagram of a cathode ray tube with electrons streaming from the negative electrode to a glowing slit">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#3d3d3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <clipPath id="tubeClip"><rect x="70" y="90" width="480" height="90" rx="45"/></clipPath>
+      </defs>
+
+      <rect x="70" y="90" width="480" height="90" rx="45" fill="#EAF3FB" stroke="#7C7A72" stroke-width="1.5"/>
+
+      <g clip-path="url(#tubeClip)">
+        <circle class="electron" cx="100" cy="135" r="5" fill="#D4537E"/>
+        <circle class="electron" cx="100" cy="135" r="5" fill="#D4537E" style="animation-delay:.35s"/>
+        <circle class="electron" cx="100" cy="135" r="5" fill="#D4537E" style="animation-delay:.7s"/>
+        <circle class="electron" cx="100" cy="135" r="5" fill="#D4537E" style="animation-delay:1.05s"/>
+      </g>
+
+      <line x1="120" y1="135" x2="480" y2="135" stroke="#85B7EB" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.6"/>
+
+      <rect x="470" y="90" width="6" height="90" fill="#3d3d3a"/>
+
+      <ellipse class="glow" cx="540" cy="135" rx="16" ry="30" fill="#ED93B1"/>
+
+      <rect x="60" y="60" width="8" height="30" fill="#7C7A72"/>
+      <line x1="64" y1="60" x2="64" y2="30" stroke="#3d3d3a" stroke-width="2"/>
+      <path d="M64 30 L72 20 M64 30 L56 20" stroke="#3d3d3a" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <text class="ts" x="30" y="18" text-anchor="start">To vacuum pump</text>
+      <text class="ts" x="30" y="55" text-anchor="start">Gas at low</text>
+      <text class="ts" x="30" y="70" text-anchor="start">pressure</text>
+
+      <line x1="70" y1="135" x2="20" y2="135" stroke="#3d3d3a" stroke-width="1.5" fill="none"/>
+      <line x1="20" y1="135" x2="20" y2="250" stroke="#3d3d3a" stroke-width="1.5" fill="none"/>
+      <line x1="20" y1="250" x2="300" y2="250" stroke="#3d3d3a" stroke-width="1.5" fill="none"/>
+      <circle cx="300" cy="250" r="3" fill="#3d3d3a"/>
+      <text class="ts" x="290" y="272" text-anchor="middle">-</text>
+
+      <line x1="330" y1="250" x2="550" y2="250" stroke="#3d3d3a" stroke-width="1.5" fill="none"/>
+      <circle cx="330" cy="250" r="3" fill="#3d3d3a"/>
+      <text class="th" x="440" y="272" text-anchor="middle">15 000 V</text>
+      <text class="ts" x="340" y="272" text-anchor="middle">+</text>
+      <line x1="550" y1="250" x2="550" y2="180" stroke="#3d3d3a" stroke-width="1.5" fill="none"/>
+
+      <line x1="476" y1="110" x2="560" y2="60" stroke="var(--muted)" stroke-width="0.5" stroke-dasharray="3 3"/>
+      <text class="th" x="566" y="64">Thin slit</text>
+
+      <line x1="540" y1="160" x2="600" y2="200" stroke="var(--muted)" stroke-width="0.5" stroke-dasharray="3 3"/>
+      <text class="ts" x="606" y="200">Glass glows where it</text>
+      <text class="ts" x="606" y="216">is struck by electrons</text>
+      <text class="ts" x="606" y="232">from the negative electrode</text>
+    </svg>
+
+    <div class="controls">
+      <button id="toggleBtn" onclick="toggleBeam()">Pause beam</button>
+      <span class="hint">Watch electrons stream from the negative electrode toward the slit, making the glass glow</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What happened in 1897</h2>
+    <p>
+      Thomson took a glass tube, pumped nearly all the gas out of it, and passed a very high voltage
+      (around 15,000 volts) between two electrodes at either end. A stream of glowing rays shot out
+      from the negative electrode, the cathode, and struck the glass at the far end, making it glow.
+    </p>
+    <p>
+      At the time nobody knew what these "cathode rays" actually were. Thomson tested them
+      with electric and magnetic fields and found something surprising:
+    </p>
+    <ul>
+      <li>The rays always bent toward the positively charged plate, meaning they carried a negative charge.</li>
+      <li>The amount they bent was the same no matter what gas was in the tube or what metal the electrodes were made of.</li>
+      <li>By measuring the deflection, Thomson calculated the charge-to-mass ratio of the particles and found they were roughly 1,800 times lighter than a hydrogen atom.</li>
+    </ul>
+    <p>
+      This told him the rays were not light, and not whole atoms, but a stream of tiny negatively
+      charged particles that exist inside every atom. He called them "corpuscles" &mdash; today we call
+      them electrons. It was the first evidence that the atom was not the smallest, indivisible
+      particle of matter, as had been assumed for centuries.
+    </p>
+  </div>
+</div>
+
+<script>
+let running = true;
+function toggleBeam(){
+  running = !running;
+  document.querySelectorAll('.electron').forEach(el => el.classList.toggle('off', !running));
+  document.querySelector('.glow').classList.toggle('off', !running);
+  document.getElementById('toggleBtn').textContent = running ? 'Pause beam' : 'Start beam';
+}
+</script>
+</body>
+</html>
