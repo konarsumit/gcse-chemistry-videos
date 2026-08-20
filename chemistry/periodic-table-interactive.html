@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Periodic Table</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=EB+Garamond:ital@0;1&display=swap');
+  :root{
+    --border: #111111;
+    --text: #111111;
+    --muted: #555555;
+    --blue: #1a56b0;
+    --green: #2e7d32;
+    --parchment: #f8f1e0;
+    --parchment-edge: #efe4c8;
+    --gold: #a8823a;
+    --maroon: #7a2331;
+    --ink: #2b2018;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#fafafa;
+    color:var(--text);
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:1500px;margin:0 auto;}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 20px;}
+
+  .table-scroll{overflow-x:auto;padding-bottom:10px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(18, minmax(58px, 1fr));
+    grid-auto-rows:minmax(58px, auto);
+    gap:3px;
+    min-width:1080px;
+  }
+
+  .cell{
+    border:1px solid var(--border);
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:3px 2px;
+    text-align:center;
+    line-height:1.05;
+    font-family:inherit;
+    cursor:default;
+    position:relative;
+  }
+  .cell.placeholder{background:#f2f2f2;}
+  .cell.has-data{cursor:pointer;}
+  .cell.has-data:hover{filter:brightness(0.95);}
+  .cell.has-data .sym{color:var(--blue);}
+
+  .cell.cat-metal{background:#dceafb; border-color:#7fa8d9;}
+  .cell.cat-nonmetal{background:#e2f3e0; border-color:#7fbf7a;}
+  .cell.cat-metalloid{background:#faf1d9; border-color:#c9a24a;}
+
+  .num{font-size:9px; color:var(--muted); align-self:flex-start; margin-left:2px;}
+  .sym{font-size:16px; font-weight:700; margin-top:-2px;}
+  .name{font-size:7.5px; color:var(--muted); margin-top:1px;}
+  .mass{font-size:7.5px; color:var(--muted);}
+
+  .state-badge{
+    position:absolute; top:2px; right:2px;
+    width:13px; height:13px;
+  }
+  .state-badge svg{display:block;width:100%;height:100%;}
+
+  .series-wrap{margin-top:26px;}
+  .series-label{font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .series-grid{
+    display:grid;
+    grid-template-columns:repeat(18, minmax(58px, 1fr));
+    grid-auto-rows:minmax(58px, auto);
+    gap:3px;
+    min-width:1080px;
+  }
+
+  .legend{
+    margin-top:26px;
+    font-size:12px;
+    color:var(--muted);
+    border-top:1px solid #ddd;
+    padding-top:14px;
+    line-height:1.6;
+  }
+  .legend-row{display:flex; flex-wrap:wrap; gap:18px; margin-bottom:8px; align-items:center;}
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .swatch{display:inline-block;width:14px;height:14px;border:1px solid #999;border-radius:3px;}
+  .swatch.metal{background:#dceafb; border-color:#7fa8d9;}
+  .swatch.nonmetal{background:#e2f3e0; border-color:#7fbf7a;}
+  .swatch.metalloid{background:#faf1d9; border-color:#c9a24a;}
+  .badge-sample{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;}
+  .badge-sample svg{width:100%;height:100%;}
+
+  /* Modal — vintage card styling */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,14,8,0.55);
+    display:none; align-items:center; justify-content:center;
+    padding:20px; z-index:50;
+  }
+  .overlay.open{display:flex;}
+
+  .modal{
+    max-width:520px; width:100%;
+    height:580px;
+    position:relative;
+    perspective:1600px;
+  }
+
+  .flip-inner{
+    position:relative; width:100%; height:100%;
+    background: radial-gradient(ellipse at 30% 20%, #fdf8ec 0%, var(--parchment) 55%, var(--parchment-edge) 100%);
+    border-radius:16px;
+    overflow-y:auto;
+    padding:28px 28px 24px;
+    font-family:'EB Garamond', Georgia, serif;
+    color:var(--ink);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border:2px solid var(--gold);
+    outline:1px solid var(--maroon);
+    outline-offset:-6px;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    transition:transform 0.3s ease;
+  }
+
+  .flip-btn{
+    position:absolute; top:12px; right:46px;
+    border:1px solid var(--maroon); background:var(--parchment); color:var(--maroon);
+    border-radius:14px;
+    padding:0 10px; height:26px; cursor:pointer; font-size:11.5px;
+    font-family:'EB Garamond', Georgia, serif;
+    display:flex; align-items:center; gap:4px;
+    z-index:2;
+  }
+  .flip-btn:hover{background:#f0e6cc;}
+
+  .facts-list{list-style:none; margin:0 0 20px; padding:0;}
+  .facts-list li{
+    position:relative; padding-left:22px; margin-bottom:14px;
+    font-size:16px; line-height:1.55; font-weight:500;
+  }
+  .facts-list li::before{
+    content:'\2726'; position:absolute; left:0; top:1px;
+    color:var(--gold); font-size:11px;
+  }
+
+  .quiz-box{
+    border-top:1px solid rgba(168,130,58,0.4);
+    padding-top:14px; margin-top:6px;
+  }
+  .quiz-label{
+    font-style:italic; font-weight:600; font-size:12.5px; letter-spacing:.03em;
+    color:#8a6a1f; margin-bottom:7px;
+  }
+  .quiz-q{font-size:16.5px; font-weight:700; margin-bottom:14px; line-height:1.45; color:var(--ink);}
+  .quiz-reveal-btn{
+    border:1px solid var(--maroon); background:var(--maroon); color:#fdf8ec;
+    border-radius:8px; padding:7px 14px; font-size:12.5px; cursor:pointer;
+    font-family:'EB Garamond', Georgia, serif;
+  }
+  .quiz-answer{
+    margin-top:12px; padding:12px 14px;
+    background:rgba(168,130,58,0.16); border-radius:8px;
+    font-size:15.5px; font-weight:500; line-height:1.5; display:none;
+  }
+  .quiz-answer.shown{display:block;}
+
+  .corner-flourish{
+    position:absolute; font-size:20px; color:var(--gold); opacity:0.55;
+    font-family:serif; line-height:1; pointer-events:none;
+  }
+  .corner-flourish.tl{top:8px; left:10px;}
+  .corner-flourish.tr{top:8px; right:10px; transform:scaleX(-1);}
+  .corner-flourish.bl{bottom:6px; left:10px; transform:scaleY(-1);}
+  .corner-flourish.br{bottom:6px; right:10px; transform:scale(-1,-1);}
+
+  .modal-close{
+    position:absolute; top:12px; right:12px;
+    border:1px solid var(--maroon); background:var(--parchment); color:var(--maroon);
+    border-radius:50%;
+    width:26px; height:26px; cursor:pointer; font-size:13px; line-height:1;
+    font-family:Georgia, serif;
+    z-index:2;
+  }
+
+  .modal-header{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:2px;
+    padding-bottom:10px; margin-top:4px;
+  }
+  .modal-symbol{
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:44px; font-weight:700; color:var(--maroon);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .modal-name{
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:22px; font-weight:700; color:var(--ink);
+    letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .divider{
+    display:flex; align-items:center; gap:8px;
+    margin:2px 0 16px; color:var(--gold);
+  }
+  .divider::before, .divider::after{
+    content:''; flex:1; height:1px; background:var(--gold); opacity:0.6;
+  }
+  .divider span{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+
+  .modal-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-bottom:4px;}
+  .modal-field{border-top:1px solid rgba(168,130,58,0.35); padding-top:8px;}
+  .modal-field.full{grid-column:1 / -1;}
+  .field-label{
+    font-family:'EB Garamond', Georgia, serif; font-style:italic; font-weight:600;
+    font-size:12.5px; letter-spacing:.03em; color:#8a6a1f; margin-bottom:4px;
+  }
+  .field-value{font-size:16px; line-height:1.5; color:var(--ink); font-weight:500;}
+
+  /* Country map section */
+  .country-section{margin-top:40px;}
+  .country-section h2{font-size:19px; font-weight:600; margin:0 0 4px;}
+  .country-section .sub{margin-bottom:16px;}
+  .country-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
+    gap:8px;
+  }
+  .country-card{
+    border:1px solid #ccc; background:#fff; border-radius:10px;
+    padding:12px 8px; display:flex; flex-direction:column; align-items:center;
+    gap:4px; cursor:pointer; font-family:inherit;
+  }
+  .country-card:hover{border-color:var(--blue); background:#f5f9ff;}
+  .country-flag-img{display:inline-block; width:36px;}
+  .country-flag-img svg{width:100%; height:auto; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,0.15);}
+  .country-name{font-size:12.5px; font-weight:600; text-align:center; color:var(--text);}
+  .country-count{font-size:11px; color:var(--muted); font-weight:500;}
+
+  .inline-flag{display:inline-block; width:20px; vertical-align:middle; margin-right:2px;}
+  .inline-flag svg{width:100%; height:auto; display:block; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,0.15);}
+  .country-modal-flag-img{display:inline-block; width:52px;}
+  .country-modal-flag-img svg{width:100%; height:auto; display:block; border-radius:4px; box-shadow:0 0 0 1px rgba(0,0,0,0.15);}
+
+  .country-overlay{
+    position:fixed; inset:0; background:rgba(20,14,8,0.55);
+    display:none; align-items:center; justify-content:center;
+    padding:20px; z-index:60;
+  }
+  .country-overlay.open{display:flex;}
+  .country-modal{
+    max-width:460px; width:100%; max-height:85vh; overflow-y:auto;
+    background: radial-gradient(ellipse at 30% 20%, #fdf8ec 0%, var(--parchment) 55%, var(--parchment-edge) 100%);
+    border-radius:16px; padding:28px 28px 24px; position:relative;
+    font-family:'EB Garamond', Georgia, serif; color:var(--ink);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border:2px solid var(--gold); outline:1px solid var(--maroon); outline-offset:-6px;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .country-modal-header{display:flex; align-items:center; gap:14px; margin-bottom:4px;}
+  .country-modal-name{font-family:'Playfair Display', Georgia, serif; font-size:24px; font-weight:700;}
+  .rank-list{list-style:none; margin:16px 0 0; padding:0;}
+  .rank-item{
+    display:flex; align-items:center; gap:12px;
+    padding:10px 0; border-top:1px solid rgba(168,130,58,0.35);
+  }
+  .rank-medal{font-size:20px; width:28px; text-align:center;}
+  .rank-symbol{font-family:'Playfair Display', Georgia, serif; font-size:20px; font-weight:700; color:var(--maroon); width:36px;}
+  .rank-elname{font-size:16px; font-weight:600;}
+  .rank-tag{font-size:12.5px; color:var(--muted); margin-left:auto; font-weight:500;}
+
+  /* Hall of Fame section */
+  .scientist-section{margin-top:40px;}
+  .scientist-section h2{font-size:19px; font-weight:600; margin:0 0 4px;}
+  .scientist-section .sub{margin-bottom:16px;}
+  .scientist-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    gap:10px;
+  }
+  .scientist-card{
+    border:1px solid #ccc; background:#fff; border-radius:10px;
+    padding:16px 10px; display:flex; flex-direction:column; align-items:center;
+    gap:6px; cursor:pointer; font-family:inherit;
+  }
+  .scientist-card:hover{border-color:var(--maroon); background:#fdf6f0;}
+  .scientist-avatar{
+    width:48px; height:48px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #f6ecd4, var(--parchment-edge));
+    border:1.5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Playfair Display', Georgia, serif; font-size:17px; font-weight:700;
+    color:var(--maroon);
+  }
+  .scientist-name{font-size:13px; font-weight:600; text-align:center; color:var(--text); line-height:1.3;}
+  .scientist-count{font-size:11px; color:var(--muted); font-weight:500;}
+
+  .scientist-overlay{
+    position:fixed; inset:0; background:rgba(20,14,8,0.55);
+    display:none; align-items:center; justify-content:center;
+    padding:20px; z-index:60;
+  }
+  .scientist-overlay.open{display:flex;}
+  .scientist-modal{
+    max-width:480px; width:100%; max-height:85vh; overflow-y:auto;
+    background: radial-gradient(ellipse at 30% 20%, #fdf8ec 0%, var(--parchment) 55%, var(--parchment-edge) 100%);
+    border-radius:16px; padding:28px 28px 24px; position:relative;
+    font-family:'EB Garamond', Georgia, serif; color:var(--ink);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border:2px solid var(--gold); outline:1px solid var(--maroon); outline-offset:-6px;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .scientist-modal-header{display:flex; align-items:center; gap:16px; margin-bottom:6px;}
+  .scientist-modal-avatar{
+    width:64px; height:64px; border-radius:50%; flex-shrink:0;
+    background: radial-gradient(circle at 35% 30%, #f6ecd4, var(--parchment-edge));
+    border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Playfair Display', Georgia, serif; font-size:22px; font-weight:700;
+    color:var(--maroon);
+  }
+  .scientist-modal-name{font-family:'Playfair Display', Georgia, serif; font-size:22px; font-weight:700; line-height:1.25;}
+  .scientist-modal-sub{font-size:13.5px; color:var(--muted); margin-top:3px; font-weight:500;}
+  .element-chip-row{display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 4px;}
+  .element-chip{
+    display:inline-flex; align-items:center; gap:4px;
+    border:1px solid var(--gold); border-radius:16px; padding:4px 12px 4px 9px;
+    font-size:13.5px; font-weight:500; background:rgba(168,130,58,0.08);
+  }
+  .element-chip .chip-symbol{font-family:'Playfair Display', Georgia, serif; font-weight:700; color:var(--maroon);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Interactive Periodic Table</h1>
+  <p class="sub">Click any highlighted element to see its abundance, uses, physical properties and where it comes from</p>
+
+  <div class="table-scroll">
+    <div class="grid">
+      <button class="cell cat-nonmetal has-data" style="grid-column:1; grid-row:1;" data-symbol="H" onclick="openCard('H')">
+        <span class="num">1</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">H</span>
+        <span class="name">Hydrogen</span>
+        <span class="mass">1.008</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:18; grid-row:1;" data-symbol="He" onclick="openCard('He')">
+        <span class="num">2</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">He</span>
+        <span class="name">Helium</span>
+        <span class="mass">4.003</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:1; grid-row:2;" data-symbol="Li" onclick="openCard('Li')">
+        <span class="num">3</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Li</span>
+        <span class="name">Lithium</span>
+        <span class="mass">6.94</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:2; grid-row:2;" data-symbol="Be" onclick="openCard('Be')">
+        <span class="num">4</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Be</span>
+        <span class="name">Beryllium</span>
+        <span class="mass">9.012</span>
+      </button>
+      <button class="cell cat-metalloid has-data" style="grid-column:13; grid-row:2;" data-symbol="B" onclick="openCard('B')">
+        <span class="num">5</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">B</span>
+        <span class="name">Boron</span>
+        <span class="mass">10.81</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:14; grid-row:2;" data-symbol="C" onclick="openCard('C')">
+        <span class="num">6</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">C</span>
+        <span class="name">Carbon</span>
+        <span class="mass">12.01</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:15; grid-row:2;" data-symbol="N" onclick="openCard('N')">
+        <span class="num">7</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">N</span>
+        <span class="name">Nitrogen</span>
+        <span class="mass">14.01</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:16; grid-row:2;" data-symbol="O" onclick="openCard('O')">
+        <span class="num">8</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">O</span>
+        <span class="name">Oxygen</span>
+        <span class="mass">16.00</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:17; grid-row:2;" data-symbol="F" onclick="openCard('F')">
+        <span class="num">9</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">F</span>
+        <span class="name">Fluorine</span>
+        <span class="mass">19.00</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:18; grid-row:2;" data-symbol="Ne" onclick="openCard('Ne')">
+        <span class="num">10</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Ne</span>
+        <span class="name">Neon</span>
+        <span class="mass">20.18</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:1; grid-row:3;" data-symbol="Na" onclick="openCard('Na')">
+        <span class="num">11</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Na</span>
+        <span class="name">Sodium</span>
+        <span class="mass">22.99</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:2; grid-row:3;" data-symbol="Mg" onclick="openCard('Mg')">
+        <span class="num">12</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Mg</span>
+        <span class="name">Magnesium</span>
+        <span class="mass">24.31</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:13; grid-row:3;" data-symbol="Al" onclick="openCard('Al')">
+        <span class="num">13</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Al</span>
+        <span class="name">Aluminium</span>
+        <span class="mass">26.98</span>
+      </button>
+      <button class="cell cat-metalloid has-data" style="grid-column:14; grid-row:3;" data-symbol="Si" onclick="openCard('Si')">
+        <span class="num">14</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Si</span>
+        <span class="name">Silicon</span>
+        <span class="mass">28.09</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:15; grid-row:3;" data-symbol="P" onclick="openCard('P')">
+        <span class="num">15</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">P</span>
+        <span class="name">Phosphorus</span>
+        <span class="mass">30.97</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:16; grid-row:3;" data-symbol="S" onclick="openCard('S')">
+        <span class="num">16</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">S</span>
+        <span class="name">Sulfur</span>
+        <span class="mass">32.06</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:17; grid-row:3;" data-symbol="Cl" onclick="openCard('Cl')">
+        <span class="num">17</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Cl</span>
+        <span class="name">Chlorine</span>
+        <span class="mass">35.45</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:18; grid-row:3;" data-symbol="Ar" onclick="openCard('Ar')">
+        <span class="num">18</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Ar</span>
+        <span class="name">Argon</span>
+        <span class="mass">39.95</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:1; grid-row:4;" data-symbol="K" onclick="openCard('K')">
+        <span class="num">19</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">K</span>
+        <span class="name">Potassium</span>
+        <span class="mass">39.10</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:2; grid-row:4;" data-symbol="Ca" onclick="openCard('Ca')">
+        <span class="num">20</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ca</span>
+        <span class="name">Calcium</span>
+        <span class="mass">40.08</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:3; grid-row:4;" data-symbol="Sc" onclick="openCard('Sc')">
+        <span class="num">21</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sc</span>
+        <span class="name">Scandium</span>
+        <span class="mass">44.96</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:4; grid-row:4;" data-symbol="Ti" onclick="openCard('Ti')">
+        <span class="num">22</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ti</span>
+        <span class="name">Titanium</span>
+        <span class="mass">47.87</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:4;" data-symbol="V" onclick="openCard('V')">
+        <span class="num">23</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">V</span>
+        <span class="name">Vanadium</span>
+        <span class="mass">50.94</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:6; grid-row:4;" data-symbol="Cr" onclick="openCard('Cr')">
+        <span class="num">24</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cr</span>
+        <span class="name">Chromium</span>
+        <span class="mass">52.00</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:7; grid-row:4;" data-symbol="Mn" onclick="openCard('Mn')">
+        <span class="num">25</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Mn</span>
+        <span class="name">Manganese</span>
+        <span class="mass">54.94</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:8; grid-row:4;" data-symbol="Fe" onclick="openCard('Fe')">
+        <span class="num">26</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Fe</span>
+        <span class="name">Iron</span>
+        <span class="mass">55.85</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:9; grid-row:4;" data-symbol="Co" onclick="openCard('Co')">
+        <span class="num">27</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Co</span>
+        <span class="name">Cobalt</span>
+        <span class="mass">58.93</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:10; grid-row:4;" data-symbol="Ni" onclick="openCard('Ni')">
+        <span class="num">28</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ni</span>
+        <span class="name">Nickel</span>
+        <span class="mass">58.69</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:11; grid-row:4;" data-symbol="Cu" onclick="openCard('Cu')">
+        <span class="num">29</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cu</span>
+        <span class="name">Copper</span>
+        <span class="mass">63.55</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:12; grid-row:4;" data-symbol="Zn" onclick="openCard('Zn')">
+        <span class="num">30</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Zn</span>
+        <span class="name">Zinc</span>
+        <span class="mass">65.39</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:4;" data-symbol="Ga" onclick="openCard('Ga')">
+        <span class="num">31</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ga</span>
+        <span class="name">Gallium</span>
+        <span class="mass">69.72</span>
+      </button>
+      <button class="cell cat-metalloid" style="grid-column:14; grid-row:4;" data-symbol="Ge" onclick="openCard('Ge')">
+        <span class="num">32</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ge</span>
+        <span class="name">Germanium</span>
+        <span class="mass">72.63</span>
+      </button>
+      <button class="cell cat-metalloid has-data" style="grid-column:15; grid-row:4;" data-symbol="As" onclick="openCard('As')">
+        <span class="num">33</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">As</span>
+        <span class="name">Arsenic</span>
+        <span class="mass">74.92</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:16; grid-row:4;" data-symbol="Se" onclick="openCard('Se')">
+        <span class="num">34</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Se</span>
+        <span class="name">Selenium</span>
+        <span class="mass">78.96</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:17; grid-row:4;" data-symbol="Br" onclick="openCard('Br')">
+        <span class="num">35</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="4.5" r="1.3" fill="#1a56b0"/><circle cx="9.5" cy="5.5" r="1" fill="#1a56b0"/><circle cx="6" cy="9.5" r="1.15" fill="#1a56b0"/></svg></span>
+        <span class="sym">Br</span>
+        <span class="name">Bromine</span>
+        <span class="mass">79.90</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:18; grid-row:4;" data-symbol="Kr" onclick="openCard('Kr')">
+        <span class="num">36</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Kr</span>
+        <span class="name">Krypton</span>
+        <span class="mass">83.80</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:1; grid-row:5;" data-symbol="Rb" onclick="openCard('Rb')">
+        <span class="num">37</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Rb</span>
+        <span class="name">Rubidium</span>
+        <span class="mass">85.47</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:2; grid-row:5;" data-symbol="Sr" onclick="openCard('Sr')">
+        <span class="num">38</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sr</span>
+        <span class="name">Strontium</span>
+        <span class="mass">87.62</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:3; grid-row:5;" data-symbol="Y" onclick="openCard('Y')">
+        <span class="num">39</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Y</span>
+        <span class="name">Yttrium</span>
+        <span class="mass">88.91</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:4; grid-row:5;" data-symbol="Zr" onclick="openCard('Zr')">
+        <span class="num">40</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Zr</span>
+        <span class="name">Zirconium</span>
+        <span class="mass">91.22</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:5;" data-symbol="Nb" onclick="openCard('Nb')">
+        <span class="num">41</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Nb</span>
+        <span class="name">Niobium</span>
+        <span class="mass">92.91</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:6; grid-row:5;" data-symbol="Mo" onclick="openCard('Mo')">
+        <span class="num">42</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Mo</span>
+        <span class="name">Molybdenum</span>
+        <span class="mass">95.96</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:7; grid-row:5;" data-symbol="Tc" onclick="openCard('Tc')">
+        <span class="num">43</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Tc</span>
+        <span class="name">Technetium</span>
+        <span class="mass">(98)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:8; grid-row:5;" data-symbol="Ru" onclick="openCard('Ru')">
+        <span class="num">44</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ru</span>
+        <span class="name">Ruthenium</span>
+        <span class="mass">101.1</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:9; grid-row:5;" data-symbol="Rh" onclick="openCard('Rh')">
+        <span class="num">45</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Rh</span>
+        <span class="name">Rhodium</span>
+        <span class="mass">102.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:10; grid-row:5;" data-symbol="Pd" onclick="openCard('Pd')">
+        <span class="num">46</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pd</span>
+        <span class="name">Palladium</span>
+        <span class="mass">106.4</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:11; grid-row:5;" data-symbol="Ag" onclick="openCard('Ag')">
+        <span class="num">47</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ag</span>
+        <span class="name">Silver</span>
+        <span class="mass">107.9</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:12; grid-row:5;" data-symbol="Cd" onclick="openCard('Cd')">
+        <span class="num">48</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cd</span>
+        <span class="name">Cadmium</span>
+        <span class="mass">112.4</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:5;" data-symbol="In" onclick="openCard('In')">
+        <span class="num">49</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">In</span>
+        <span class="name">Indium</span>
+        <span class="mass">114.8</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:14; grid-row:5;" data-symbol="Sn" onclick="openCard('Sn')">
+        <span class="num">50</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sn</span>
+        <span class="name">Tin</span>
+        <span class="mass">118.7</span>
+      </button>
+      <button class="cell cat-metalloid" style="grid-column:15; grid-row:5;" data-symbol="Sb" onclick="openCard('Sb')">
+        <span class="num">51</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sb</span>
+        <span class="name">Antimony</span>
+        <span class="mass">121.8</span>
+      </button>
+      <button class="cell cat-metalloid" style="grid-column:16; grid-row:5;" data-symbol="Te" onclick="openCard('Te')">
+        <span class="num">52</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Te</span>
+        <span class="name">Tellurium</span>
+        <span class="mass">127.6</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:17; grid-row:5;" data-symbol="I" onclick="openCard('I')">
+        <span class="num">53</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">I</span>
+        <span class="name">Iodine</span>
+        <span class="mass">126.9</span>
+      </button>
+      <button class="cell cat-nonmetal has-data" style="grid-column:18; grid-row:5;" data-symbol="Xe" onclick="openCard('Xe')">
+        <span class="num">54</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Xe</span>
+        <span class="name">Xenon</span>
+        <span class="mass">131.3</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:1; grid-row:6;" data-symbol="Cs" onclick="openCard('Cs')">
+        <span class="num">55</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cs</span>
+        <span class="name">Caesium</span>
+        <span class="mass">132.9</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:2; grid-row:6;" data-symbol="Ba" onclick="openCard('Ba')">
+        <span class="num">56</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ba</span>
+        <span class="name">Barium</span>
+        <span class="mass">137.3</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:4; grid-row:6;" data-symbol="Hf" onclick="openCard('Hf')">
+        <span class="num">72</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Hf</span>
+        <span class="name">Hafnium</span>
+        <span class="mass">178.5</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:6;" data-symbol="Ta" onclick="openCard('Ta')">
+        <span class="num">73</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ta</span>
+        <span class="name">Tantalum</span>
+        <span class="mass">180.9</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:6; grid-row:6;" data-symbol="W" onclick="openCard('W')">
+        <span class="num">74</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">W</span>
+        <span class="name">Tungsten</span>
+        <span class="mass">183.8</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:7; grid-row:6;" data-symbol="Re" onclick="openCard('Re')">
+        <span class="num">75</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Re</span>
+        <span class="name">Rhenium</span>
+        <span class="mass">186.2</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:8; grid-row:6;" data-symbol="Os" onclick="openCard('Os')">
+        <span class="num">76</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Os</span>
+        <span class="name">Osmium</span>
+        <span class="mass">190.2</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:9; grid-row:6;" data-symbol="Ir" onclick="openCard('Ir')">
+        <span class="num">77</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ir</span>
+        <span class="name">Iridium</span>
+        <span class="mass">192.2</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:10; grid-row:6;" data-symbol="Pt" onclick="openCard('Pt')">
+        <span class="num">78</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pt</span>
+        <span class="name">Platinum</span>
+        <span class="mass">195.1</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:11; grid-row:6;" data-symbol="Au" onclick="openCard('Au')">
+        <span class="num">79</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Au</span>
+        <span class="name">Gold</span>
+        <span class="mass">197.0</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:12; grid-row:6;" data-symbol="Hg" onclick="openCard('Hg')">
+        <span class="num">80</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="4.5" r="1.3" fill="#1a56b0"/><circle cx="9.5" cy="5.5" r="1" fill="#1a56b0"/><circle cx="6" cy="9.5" r="1.15" fill="#1a56b0"/></svg></span>
+        <span class="sym">Hg</span>
+        <span class="name">Mercury</span>
+        <span class="mass">200.6</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:6;" data-symbol="Tl" onclick="openCard('Tl')">
+        <span class="num">81</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Tl</span>
+        <span class="name">Thallium</span>
+        <span class="mass">204.4</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:14; grid-row:6;" data-symbol="Pb" onclick="openCard('Pb')">
+        <span class="num">82</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pb</span>
+        <span class="name">Lead</span>
+        <span class="mass">207.2</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:15; grid-row:6;" data-symbol="Bi" onclick="openCard('Bi')">
+        <span class="num">83</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Bi</span>
+        <span class="name">Bismuth</span>
+        <span class="mass">209.0</span>
+      </button>
+      <button class="cell cat-metalloid" style="grid-column:16; grid-row:6;" data-symbol="Po" onclick="openCard('Po')">
+        <span class="num">84</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Po</span>
+        <span class="name">Polonium</span>
+        <span class="mass">(209)</span>
+      </button>
+      <button class="cell cat-metalloid" style="grid-column:17; grid-row:6;" data-symbol="At" onclick="openCard('At')">
+        <span class="num">85</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">At</span>
+        <span class="name">Astatine</span>
+        <span class="mass">(210)</span>
+      </button>
+      <button class="cell cat-nonmetal" style="grid-column:18; grid-row:6;" data-symbol="Rn" onclick="openCard('Rn')">
+        <span class="num">86</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Rn</span>
+        <span class="name">Radon</span>
+        <span class="mass">(222)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:1; grid-row:7;" data-symbol="Fr" onclick="openCard('Fr')">
+        <span class="num">87</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Fr</span>
+        <span class="name">Francium</span>
+        <span class="mass">(223)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:2; grid-row:7;" data-symbol="Ra" onclick="openCard('Ra')">
+        <span class="num">88</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ra</span>
+        <span class="name">Radium</span>
+        <span class="mass">(226)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:4; grid-row:7;" data-symbol="Rf" onclick="openCard('Rf')">
+        <span class="num">104</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Rf</span>
+        <span class="name">Rutherfordium</span>
+        <span class="mass">(267)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:7;" data-symbol="Db" onclick="openCard('Db')">
+        <span class="num">105</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Db</span>
+        <span class="name">Dubnium</span>
+        <span class="mass">(268)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:6; grid-row:7;" data-symbol="Sg" onclick="openCard('Sg')">
+        <span class="num">106</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sg</span>
+        <span class="name">Seaborgium</span>
+        <span class="mass">(271)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:7; grid-row:7;" data-symbol="Bh" onclick="openCard('Bh')">
+        <span class="num">107</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Bh</span>
+        <span class="name">Bohrium</span>
+        <span class="mass">(272)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:8; grid-row:7;" data-symbol="Hs" onclick="openCard('Hs')">
+        <span class="num">108</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Hs</span>
+        <span class="name">Hassium</span>
+        <span class="mass">(270)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:9; grid-row:7;" data-symbol="Mt" onclick="openCard('Mt')">
+        <span class="num">109</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Mt</span>
+        <span class="name">Meitnerium</span>
+        <span class="mass">(276)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:10; grid-row:7;" data-symbol="Ds" onclick="openCard('Ds')">
+        <span class="num">110</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ds</span>
+        <span class="name">Darmstadtium</span>
+        <span class="mass">(281)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:11; grid-row:7;" data-symbol="Rg" onclick="openCard('Rg')">
+        <span class="num">111</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Rg</span>
+        <span class="name">Roentgenium</span>
+        <span class="mass">(280)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:12; grid-row:7;" data-symbol="Cn" onclick="openCard('Cn')">
+        <span class="num">112</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cn</span>
+        <span class="name">Copernicium</span>
+        <span class="mass">(285)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:7;" data-symbol="Nh" onclick="openCard('Nh')">
+        <span class="num">113</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Nh</span>
+        <span class="name">Nihonium</span>
+        <span class="mass">(284)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:14; grid-row:7;" data-symbol="Fl" onclick="openCard('Fl')">
+        <span class="num">114</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Fl</span>
+        <span class="name">Flerovium</span>
+        <span class="mass">(289)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:15; grid-row:7;" data-symbol="Mc" onclick="openCard('Mc')">
+        <span class="num">115</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Mc</span>
+        <span class="name">Moscovium</span>
+        <span class="mass">(288)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:16; grid-row:7;" data-symbol="Lv" onclick="openCard('Lv')">
+        <span class="num">116</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Lv</span>
+        <span class="name">Livermorium</span>
+        <span class="mass">(293)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:17; grid-row:7;" data-symbol="Ts" onclick="openCard('Ts')">
+        <span class="num">117</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ts</span>
+        <span class="name">Tennessine</span>
+        <span class="mass">(294)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:18; grid-row:7;" data-symbol="Og" onclick="openCard('Og')">
+        <span class="num">118</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span>
+        <span class="sym">Og</span>
+        <span class="name">Oganesson</span>
+        <span class="mass">(294)</span>
+      </button>
+      <div class="cell placeholder" style="grid-column:3; grid-row:6;">
+        <span class="num">57&#8211;71</span>
+        <span class="sym">La&#8211;Lu</span>
+        <span class="name">Lanthanides</span>
+      </div>
+      <div class="cell placeholder" style="grid-column:3; grid-row:7;">
+        <span class="num">89&#8211;103</span>
+        <span class="sym">Ac&#8211;Lr</span>
+        <span class="name">Actinides</span>
+      </div>
+    </div>
+
+    <div class="series-wrap">
+      <div class="series-label">Lanthanides (top row) and actinides (bottom row)</div>
+      <div class="series-grid">
+      <button class="cell cat-metal" style="grid-column:3; grid-row:1;" data-symbol="La" onclick="openCard('La')">
+        <span class="num">57</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">La</span>
+        <span class="name">Lanthanum</span>
+        <span class="mass">138.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:4; grid-row:1;" data-symbol="Ce" onclick="openCard('Ce')">
+        <span class="num">58</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ce</span>
+        <span class="name">Cerium</span>
+        <span class="mass">140.1</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:1;" data-symbol="Pr" onclick="openCard('Pr')">
+        <span class="num">59</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pr</span>
+        <span class="name">Praseodymium</span>
+        <span class="mass">140.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:6; grid-row:1;" data-symbol="Nd" onclick="openCard('Nd')">
+        <span class="num">60</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Nd</span>
+        <span class="name">Neodymium</span>
+        <span class="mass">144.2</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:7; grid-row:1;" data-symbol="Pm" onclick="openCard('Pm')">
+        <span class="num">61</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pm</span>
+        <span class="name">Promethium</span>
+        <span class="mass">(145)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:8; grid-row:1;" data-symbol="Sm" onclick="openCard('Sm')">
+        <span class="num">62</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Sm</span>
+        <span class="name">Samarium</span>
+        <span class="mass">150.4</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:9; grid-row:1;" data-symbol="Eu" onclick="openCard('Eu')">
+        <span class="num">63</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Eu</span>
+        <span class="name">Europium</span>
+        <span class="mass">152.0</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:10; grid-row:1;" data-symbol="Gd" onclick="openCard('Gd')">
+        <span class="num">64</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Gd</span>
+        <span class="name">Gadolinium</span>
+        <span class="mass">157.3</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:11; grid-row:1;" data-symbol="Tb" onclick="openCard('Tb')">
+        <span class="num">65</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Tb</span>
+        <span class="name">Terbium</span>
+        <span class="mass">158.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:12; grid-row:1;" data-symbol="Dy" onclick="openCard('Dy')">
+        <span class="num">66</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Dy</span>
+        <span class="name">Dysprosium</span>
+        <span class="mass">162.5</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:1;" data-symbol="Ho" onclick="openCard('Ho')">
+        <span class="num">67</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ho</span>
+        <span class="name">Holmium</span>
+        <span class="mass">164.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:14; grid-row:1;" data-symbol="Er" onclick="openCard('Er')">
+        <span class="num">68</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Er</span>
+        <span class="name">Erbium</span>
+        <span class="mass">167.3</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:15; grid-row:1;" data-symbol="Tm" onclick="openCard('Tm')">
+        <span class="num">69</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Tm</span>
+        <span class="name">Thulium</span>
+        <span class="mass">168.9</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:16; grid-row:1;" data-symbol="Yb" onclick="openCard('Yb')">
+        <span class="num">70</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Yb</span>
+        <span class="name">Ytterbium</span>
+        <span class="mass">173.0</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:17; grid-row:1;" data-symbol="Lu" onclick="openCard('Lu')">
+        <span class="num">71</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Lu</span>
+        <span class="name">Lutetium</span>
+        <span class="mass">175.0</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:3; grid-row:2;" data-symbol="Ac" onclick="openCard('Ac')">
+        <span class="num">89</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Ac</span>
+        <span class="name">Actinium</span>
+        <span class="mass">(227)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:4; grid-row:2;" data-symbol="Th" onclick="openCard('Th')">
+        <span class="num">90</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Th</span>
+        <span class="name">Thorium</span>
+        <span class="mass">232.0</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:5; grid-row:2;" data-symbol="Pa" onclick="openCard('Pa')">
+        <span class="num">91</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pa</span>
+        <span class="name">Protactinium</span>
+        <span class="mass">231.0</span>
+      </button>
+      <button class="cell cat-metal has-data" style="grid-column:6; grid-row:2;" data-symbol="U" onclick="openCard('U')">
+        <span class="num">92</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">U</span>
+        <span class="name">Uranium</span>
+        <span class="mass">238.0</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:7; grid-row:2;" data-symbol="Np" onclick="openCard('Np')">
+        <span class="num">93</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Np</span>
+        <span class="name">Neptunium</span>
+        <span class="mass">(237)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:8; grid-row:2;" data-symbol="Pu" onclick="openCard('Pu')">
+        <span class="num">94</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Pu</span>
+        <span class="name">Plutonium</span>
+        <span class="mass">(244)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:9; grid-row:2;" data-symbol="Am" onclick="openCard('Am')">
+        <span class="num">95</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Am</span>
+        <span class="name">Americium</span>
+        <span class="mass">(243)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:10; grid-row:2;" data-symbol="Cm" onclick="openCard('Cm')">
+        <span class="num">96</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cm</span>
+        <span class="name">Curium</span>
+        <span class="mass">(247)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:11; grid-row:2;" data-symbol="Bk" onclick="openCard('Bk')">
+        <span class="num">97</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Bk</span>
+        <span class="name">Berkelium</span>
+        <span class="mass">(247)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:12; grid-row:2;" data-symbol="Cf" onclick="openCard('Cf')">
+        <span class="num">98</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Cf</span>
+        <span class="name">Californium</span>
+        <span class="mass">(251)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:13; grid-row:2;" data-symbol="Es" onclick="openCard('Es')">
+        <span class="num">99</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Es</span>
+        <span class="name">Einsteinium</span>
+        <span class="mass">(252)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:14; grid-row:2;" data-symbol="Fm" onclick="openCard('Fm')">
+        <span class="num">100</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Fm</span>
+        <span class="name">Fermium</span>
+        <span class="mass">(257)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:15; grid-row:2;" data-symbol="Md" onclick="openCard('Md')">
+        <span class="num">101</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Md</span>
+        <span class="name">Mendelevium</span>
+        <span class="mass">(258)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:16; grid-row:2;" data-symbol="No" onclick="openCard('No')">
+        <span class="num">102</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">No</span>
+        <span class="name">Nobelium</span>
+        <span class="mass">(259)</span>
+      </button>
+      <button class="cell cat-metal" style="grid-column:17; grid-row:2;" data-symbol="Lr" onclick="openCard('Lr')">
+        <span class="num">103</span>
+        <span class="state-badge"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span>
+        <span class="sym">Lr</span>
+        <span class="name">Lawrencium</span>
+        <span class="mass">(262)</span>
+      </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-row">
+      <div class="legend-item"><span class="swatch metal"></span> Metal</div>
+      <div class="legend-item"><span class="swatch nonmetal"></span> Non-metal</div>
+      <div class="legend-item"><span class="swatch metalloid"></span> Metalloid</div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-item"><span class="badge-sample"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="#444444"/></svg></span> Solid at room temperature</div>
+      <div class="legend-item"><span class="badge-sample"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="4.5" r="1.3" fill="#1a56b0"/><circle cx="9.5" cy="5.5" r="1" fill="#1a56b0"/><circle cx="6" cy="9.5" r="1.15" fill="#1a56b0"/></svg></span> Liquid at room temperature</div>
+      <div class="legend-item"><span class="badge-sample"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#2e7d32" stroke-width="1.6"/></svg></span> Gas at room temperature</div>
+    </div>
+    Elements with a blue symbol have a full data card &mdash; click to open it. Elements in plain grey text don't have data yet; more are being added over time.
+  </div>
+
+  <div class="country-section">
+    <h2>Where These Elements Come From</h2>
+    <p class="sub">Click a country to see which elements it's a top producer of</p>
+    <div class="country-grid">
+      <button class="country-card" onclick="openCountryCard('China')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#DE2910"/>
+<g fill="#FFDE00">
+<polygon points="5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3"/>
+<circle cx="9.5" cy="2" r="0.6"/><circle cx="11" cy="4" r="0.6"/>
+<circle cx="11" cy="6.5" r="0.6"/><circle cx="9.5" cy="8.3" r="0.6"/>
+</g>
+</svg></span>
+        <span class="country-name">China</span>
+        <span class="country-count">28 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('USA')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#B22234"/>
+<g fill="#fff">
+<rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/>
+<rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/>
+<rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/>
+</g>
+<rect width="12" height="10.77" fill="#3C3B6E"/>
+</svg></span>
+        <span class="country-name">USA</span>
+        <span class="country-count">10 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Russia')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect y="0.00" width="30" height="6.67" fill="#fff"/><rect y="6.67" width="30" height="6.67" fill="#0039A6"/><rect y="13.33" width="30" height="6.67" fill="#D52B1E"/></svg></span>
+        <span class="country-name">Russia</span>
+        <span class="country-count">8 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Australia')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#00247D"/>
+<rect width="15" height="10" fill="#00247D"/>
+<g stroke="#fff" stroke-width="1"><line x1="0" y1="0" x2="15" y2="10"/><line x1="15" y1="0" x2="0" y2="10"/></g>
+<line x1="7.5" y1="0" x2="7.5" y2="10" stroke="#fff" stroke-width="1.6"/>
+<line x1="0" y1="5" x2="15" y2="5" stroke="#fff" stroke-width="1.6"/>
+<line x1="7.5" y1="0" x2="7.5" y2="10" stroke="#C8102E" stroke-width="0.8"/>
+<line x1="0" y1="5" x2="15" y2="5" stroke="#C8102E" stroke-width="0.8"/>
+<g fill="#fff">
+<polygon points="22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1"/>
+<polygon points="25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8"/>
+<polygon points="20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8"/>
+<polygon points="24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1"/>
+<circle cx="17" cy="16" r="0.6"/>
+</g>
+</svg></span>
+        <span class="country-name">Australia</span>
+        <span class="country-count">8 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('South Africa')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#fff"/>
+<polygon points="0,0 12,10 0,20" fill="#000"/>
+<polygon points="0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5" fill="#007A4D"/>
+<polygon points="0,3.3 0,16.7 9,10" fill="#FFB612"/>
+<polygon points="0,6.6 0,13.4 6,10" fill="#DE3831"/>
+<rect y="8.5" width="30" height="3" fill="#001489"/>
+<rect y="7" width="30" height="1" fill="#fff"/>
+<rect y="12" width="30" height="1" fill="#fff"/>
+</svg></span>
+        <span class="country-name">South Africa</span>
+        <span class="country-count">4 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Chile')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="10" fill="#fff"/>
+<rect y="10" width="30" height="10" fill="#D52B1E"/>
+<rect width="10" height="10" fill="#0039A6"/>
+<polygon points="5,3 5.6,4.8 7.5,4.8 6,5.9 6.6,7.7 5,6.6 3.4,7.7 4,5.9 2.5,4.8 4.4,4.8" fill="#fff"/>
+</svg></span>
+        <span class="country-name">Chile</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Mexico')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="10" height="20" fill="#006847"/>
+<rect x="10" width="10" height="20" fill="#fff"/>
+<rect x="20" width="10" height="20" fill="#CE1126"/>
+<circle cx="15" cy="10" r="2.2" fill="#8B5A2B"/>
+</svg></span>
+        <span class="country-name">Mexico</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('India')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="6.67" fill="#FF9933"/>
+<rect y="6.67" width="30" height="6.67" fill="#fff"/>
+<rect y="13.33" width="30" height="6.67" fill="#138808"/>
+<circle cx="15" cy="10" r="2" fill="none" stroke="#000080" stroke-width="0.35"/>
+</svg></span>
+        <span class="country-name">India</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Morocco')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#C1272D"/>
+<polygon points="15,6.5 16,9.2 19,9.2 16.5,11 17.5,13.7 15,12 12.5,13.7 13.5,11 11,9.2 14,9.2" fill="none" stroke="#006233" stroke-width="0.6"/>
+</svg></span>
+        <span class="country-name">Morocco</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Canada')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="7.5" height="20" fill="#FF0000"/>
+<rect x="7.5" width="15" height="20" fill="#fff"/>
+<rect x="22.5" width="7.5" height="20" fill="#FF0000"/>
+<polygon points="15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8" fill="#FF0000"/>
+</svg></span>
+        <span class="country-name">Canada</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Peru')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect x="0.00" width="10.00" height="20" fill="#D91023"/><rect x="10.00" width="10.00" height="20" fill="#fff"/><rect x="20.00" width="10.00" height="20" fill="#D91023"/></svg></span>
+        <span class="country-name">Peru</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Japan')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#fff"/>
+<circle cx="15" cy="10" r="5.6" fill="#BC002D"/>
+</svg></span>
+        <span class="country-name">Japan</span>
+        <span class="country-count">3 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Kazakhstan')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#00AFCA"/>
+<circle cx="15" cy="9" r="3.2" fill="#FEC50C"/>
+<g stroke="#FEC50C" stroke-width="0.35">
+<line x1="15" y1="2.5" x2="15" y2="5.3"/><line x1="15" y1="12.7" x2="15" y2="15.5"/>
+<line x1="8.5" y1="9" x2="11.3" y2="9"/><line x1="18.7" y1="9" x2="21.5" y2="9"/>
+<line x1="10.4" y1="4.4" x2="12.3" y2="6.3"/><line x1="17.7" y1="11.7" x2="19.6" y2="13.6"/>
+<line x1="19.6" y1="4.4" x2="17.7" y2="6.3"/><line x1="12.3" y1="11.7" x2="10.4" y2="13.6"/>
+</g>
+</svg></span>
+        <span class="country-name">Kazakhstan</span>
+        <span class="country-count">2 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Indonesia')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect y="0.00" width="30" height="10.00" fill="#FF0000"/><rect y="10.00" width="30" height="10.00" fill="#fff"/></svg></span>
+        <span class="country-name">Indonesia</span>
+        <span class="country-count">2 elements</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Qatar')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#fff"/>
+<polygon points="9,0 30,0 30,20 9,20 12,18.2 9.5,16.4 12,14.5 9.5,12.7 12,10.9 9.5,9.1 12,7.3 9.5,5.5 12,3.6 9.5,1.8" fill="#8D1B3D"/>
+</svg></span>
+        <span class="country-name">Qatar</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Algeria')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="15" height="20" fill="#006233"/>
+<rect x="15" width="15" height="20" fill="#fff"/>
+<circle cx="15" cy="10" r="3.6" fill="none" stroke="#D21034" stroke-width="0.8"/>
+<circle cx="16.5" cy="10" r="3.4" fill="#fff"/>
+<polygon points="17.5,7 18.1,8.8 20,8.8 18.5,9.9 19.1,11.7 17.5,10.6 15.9,11.7 16.5,9.9 15,8.8 16.9,8.8" fill="#D21034"/>
+</svg></span>
+        <span class="country-name">Algeria</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Turkey')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#E30A17"/>
+<circle cx="12.5" cy="10" r="4.2" fill="#fff"/>
+<circle cx="13.7" cy="10" r="3.4" fill="#E30A17"/>
+<polygon points="18,7.2 18.6,9 20.5,9 19,10.1 19.6,11.9 18,10.8 16.4,11.9 17,10.1 15.5,9 17.4,9" fill="#fff"/>
+</svg></span>
+        <span class="country-name">Turkey</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Botswana')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#75AADB"/>
+<rect y="8" width="30" height="4" fill="#fff"/>
+<rect y="9" width="30" height="2" fill="#000"/>
+</svg></span>
+        <span class="country-name">Botswana</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Mongolia')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="10" height="20" fill="#C4272F"/>
+<rect x="10" width="10" height="20" fill="#015197"/>
+<rect x="20" width="10" height="20" fill="#C4272F"/>
+<circle cx="5" cy="7" r="1.3" fill="#F9CF02"/>
+<rect x="4.3" y="8.5" width="1.4" height="4" fill="#F9CF02"/>
+</svg></span>
+        <span class="country-name">Mongolia</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Guinea')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect x="0.00" width="10.00" height="20" fill="#CE1126"/><rect x="10.00" width="10.00" height="20" fill="#FCD116"/><rect x="20.00" width="10.00" height="20" fill="#009460"/></svg></span>
+        <span class="country-name">Guinea</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Belarus')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="13.3" fill="#D22730"/>
+<rect y="13.3" width="30" height="6.7" fill="#00AF66"/>
+<rect width="3" height="20" fill="#fff"/>
+<g fill="#D22730">
+<rect x="0.4" y="1" width="0.6" height="0.6"/><rect x="1.4" y="1" width="0.6" height="0.6"/>
+<rect x="0.4" y="2" width="0.6" height="0.6"/><rect x="1.4" y="2" width="0.6" height="0.6"/>
+</g>
+</svg></span>
+        <span class="country-name">Belarus</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Brazil')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#009739"/>
+<polygon points="15,3 27,10 15,17 3,10" fill="#FEDD00"/>
+<circle cx="15" cy="10" r="4" fill="#012169"/>
+</svg></span>
+        <span class="country-name">Brazil</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Democratic Republic of Congo')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#007FFF"/>
+<polygon points="0,20 4,20 30,2 30,0 26,0" fill="#F7D618"/>
+<polygon points="0.7,20 3,20 30,1 27.7,1" fill="#CE1021"/>
+<polygon points="21.5,3 22.1,4.8 24,4.8 22.5,5.9 23.1,7.7 21.5,6.6 19.9,7.7 20.5,5.9 19,4.8 20.9,4.8" fill="#F7D618"/>
+</svg></span>
+        <span class="country-name">Democratic Republic of Congo</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Philippines')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="10" fill="#0038A8"/>
+<rect y="10" width="30" height="10" fill="#CE1126"/>
+<polygon points="0,0 13,10 0,20" fill="#fff"/>
+<circle cx="4" cy="10" r="1.6" fill="#FCD116"/>
+</svg></span>
+        <span class="country-name">Philippines</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Germany')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect y="0.00" width="30" height="6.67" fill="#000"/><rect y="6.67" width="30" height="6.67" fill="#DD0000"/><rect y="13.33" width="30" height="6.67" fill="#FFCE00"/></svg></span>
+        <span class="country-name">Germany</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Belgium')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20"><rect x="0.00" width="10.00" height="20" fill="#000"/><rect x="10.00" width="10.00" height="20" fill="#FDDA24"/><rect x="20.00" width="10.00" height="20" fill="#EF3340"/></svg></span>
+        <span class="country-name">Belgium</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Israel')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#fff"/>
+<rect y="2.4" width="30" height="2" fill="#0038B8"/>
+<rect y="15.6" width="30" height="2" fill="#0038B8"/>
+<polygon points="15,7 17,10.5 13,10.5" fill="none" stroke="#0038B8" stroke-width="0.5"/>
+<polygon points="15,13 13,9.5 17,9.5" fill="none" stroke="#0038B8" stroke-width="0.5"/>
+</svg></span>
+        <span class="country-name">Israel</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Spain')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="5" fill="#AA151B"/>
+<rect y="5" width="30" height="10" fill="#F1BF00"/>
+<rect y="15" width="30" height="5" fill="#AA151B"/>
+</svg></span>
+        <span class="country-name">Spain</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Argentina')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="6.67" fill="#74ACDF"/>
+<rect y="6.67" width="30" height="6.67" fill="#fff"/>
+<rect y="13.33" width="30" height="6.67" fill="#74ACDF"/>
+<circle cx="15" cy="10" r="1.8" fill="#F6B40E"/>
+</svg></span>
+        <span class="country-name">Argentina</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('South Korea')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#fff"/>
+<circle cx="15" cy="10" r="3.5" fill="#CD2E3A"/>
+<path d="M15,6.5 A1.75,1.75 0 0 1 15,10 A1.75,1.75 0 0 0 15,13.5 A3.5,3.5 0 0 0 15,6.5" fill="#0047A0"/>
+</svg></span>
+        <span class="country-name">South Korea</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Myanmar')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="6.67" fill="#FECB00"/>
+<rect y="6.67" width="30" height="6.67" fill="#34B233"/>
+<rect y="13.33" width="30" height="6.67" fill="#EA2839"/>
+<polygon points="15,7 15.9,9.7 18.8,9.7 16.5,11.4 17.4,14.1 15,12.4 12.6,14.1 13.5,11.4 11.2,9.7 14.1,9.7" fill="#fff"/>
+</svg></span>
+        <span class="country-name">Myanmar</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Kyrgyzstan')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<rect width="30" height="20" fill="#E8112D"/>
+<circle cx="15" cy="10" r="4" fill="#FFEF00"/>
+<circle cx="15" cy="10" r="1.6" fill="none" stroke="#E8112D" stroke-width="0.4"/>
+<g stroke="#FFEF00" stroke-width="0.3">
+<line x1="15" y1="4.2" x2="15" y2="6.2"/><line x1="15" y1="13.8" x2="15" y2="15.8"/>
+<line x1="9.2" y1="10" x2="11.2" y2="10"/><line x1="18.8" y1="10" x2="20.8" y2="10"/>
+</g>
+</svg></span>
+        <span class="country-name">Kyrgyzstan</span>
+        <span class="country-count">1 element</span>
+      </button>
+      <button class="country-card" onclick="openCountryCard('Namibia')">
+        <span class="country-flag-img"><svg viewBox="0 0 30 20">
+<polygon points="0,0 30,20 0,20" fill="#003580"/>
+<polygon points="0,0 30,0 30,20" fill="#009543"/>
+<polygon points="-1,1.5 29,20 31,20 32,18.5 2,0 -2,0" fill="#D21034" stroke="#fff" stroke-width="1.6"/>
+<circle cx="7" cy="6" r="2.4" fill="#FFCE00"/>
+</svg></span>
+        <span class="country-name">Namibia</span>
+        <span class="country-count">1 element</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="scientist-section">
+    <h2>The Element Hunters &mdash; Hall of Fame</h2>
+    <p class="sub">Click a name to see how many elements they identified, and a few things you probably didn't know about them</p>
+    <div class="scientist-grid">
+      <button class="scientist-card" onclick="openScientistCard('Humphry Davy')">
+        <span class="scientist-avatar">HD</span>
+        <span class="scientist-name">Humphry Davy</span>
+        <span class="scientist-count">6 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('William Ramsay')">
+        <span class="scientist-avatar">WR</span>
+        <span class="scientist-name">William Ramsay</span>
+        <span class="scientist-count">4 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Morris Travers')">
+        <span class="scientist-avatar">MT</span>
+        <span class="scientist-name">Morris Travers</span>
+        <span class="scientist-count">3 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Carl Wilhelm Scheele')">
+        <span class="scientist-avatar">CW</span>
+        <span class="scientist-name">Carl Wilhelm Scheele</span>
+        <span class="scientist-count">3 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Jöns Jacob Berzelius')">
+        <span class="scientist-avatar">JJ</span>
+        <span class="scientist-name">Jöns Jacob Berzelius</span>
+        <span class="scientist-count">2 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Louis Nicolas Vauquelin')">
+        <span class="scientist-avatar">LN</span>
+        <span class="scientist-name">Louis Nicolas Vauquelin</span>
+        <span class="scientist-count">2 elements</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Henri Moissan')">
+        <span class="scientist-avatar">HM</span>
+        <span class="scientist-name">Henri Moissan</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Hennig Brand')">
+        <span class="scientist-avatar">HB</span>
+        <span class="scientist-name">Hennig Brand</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Henry Cavendish')">
+        <span class="scientist-avatar">HC</span>
+        <span class="scientist-name">Henry Cavendish</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Joseph Priestley')">
+        <span class="scientist-avatar">JP</span>
+        <span class="scientist-name">Joseph Priestley</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Martin Heinrich Klaproth')">
+        <span class="scientist-avatar">MH</span>
+        <span class="scientist-name">Martin Heinrich Klaproth</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Bernard Courtois')">
+        <span class="scientist-avatar">BC</span>
+        <span class="scientist-name">Bernard Courtois</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Antoine Balard')">
+        <span class="scientist-avatar">AB</span>
+        <span class="scientist-name">Antoine Balard</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Robert Bunsen &amp; Gustav Kirchhoff')">
+        <span class="scientist-avatar">RB</span>
+        <span class="scientist-name">Robert Bunsen &amp; Gustav Kirchhoff</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Albertus Magnus')">
+        <span class="scientist-avatar">AM</span>
+        <span class="scientist-name">Albertus Magnus</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Antonio de Ulloa')">
+        <span class="scientist-avatar">AD</span>
+        <span class="scientist-name">Antonio de Ulloa</span>
+        <span class="scientist-count">1 element</span>
+      </button>
+      <button class="scientist-card" onclick="openScientistCard('Dmitri Mendeleev')">
+        <span class="scientist-avatar">DM</span>
+        <span class="scientist-name">Dmitri Mendeleev</span>
+        <span class="scientist-count">Table architect</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="scientist-overlay" id="scientistOverlay" onclick="if(event.target===this) closeScientistCard()">
+  <div class="scientist-modal" id="scientistModal"></div>
+</div>
+
+<div class="country-overlay" id="countryOverlay" onclick="if(event.target===this) closeCountryCard()">
+  <div class="country-modal" id="countryModal"></div>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this) closeCard()">
+  <div class="modal" id="modal"><div class="flip-inner" id="flipInner"></div></div>
+</div>
+
+<script>
+const triviaData = {"H": {"facts": ["Discovered by Henry Cavendish in 1766.", "Makes up about 75% of all matter in the universe — stars are powered by fusing it.", "You're roughly 10% hydrogen by mass, almost all of it locked up in water."], "quiz": {"q": "What other gas is liquid hydrogen combined with to fuel rockets like NASA's Space Shuttle main engines?", "a": "Liquid oxygen."}}, "He": {"facts": ["Found in the Sun's spectrum by Janssen and Lockyer in 1868, 27 years before it was found on Earth.", "Named after Helios, the Greek sun god.", "Sound travels faster through helium than air, which is why it makes your voice sound squeaky."], "quiz": {"q": "Roughly what share of all the mass in the universe is helium, making it the second most abundant element?", "a": "About 24%."}}, "Li": {"facts": ["Discovered by Johan August Arfwedson in 1817.", "The lightest of all metals — it even floats on water (while reacting with it).", "Lithium carbonate is used as a mood-stabilising medicine for bipolar disorder."], "quiz": {"q": "What technology has driven a huge surge in demand for lithium since the 2010s?", "a": "Rechargeable batteries for electric vehicles."}}, "Be": {"facts": ["Discovered by Louis Nicolas Vauquelin in 1798.", "Emeralds and aquamarines are both beryllium-containing minerals.", "Very toxic to inhale as dust, yet used in aerospace parts because it's light and stiff."], "quiz": {"q": "Beryllium-copper alloy tools are prized in industries handling flammable gases because of what property?", "a": "They don't produce sparks when struck."}}, "B": {"facts": ["Discovered by Gay-Lussac and Thénard in 1808.", "Borosilicate glass (like Pyrex) resists cracking from heat thanks to boron.", "Borax has been used as a cleaning agent for centuries."], "quiz": {"q": "Boron is an essential trace nutrient for the healthy growth of what kind of living things?", "a": "Plants."}}, "C": {"facts": ["Known since prehistory as charcoal and soot; recognised as an element by Lavoisier in 1789.", "Forms more compounds than any other element — it's the basis of all known life.", "Diamond and graphite are both pure carbon, just arranged completely differently."], "quiz": {"q": "What percentage of your body mass is roughly carbon?", "a": "About 18% — the second most abundant element in your body after oxygen."}}, "N": {"facts": ["Discovered by Daniel Rutherford in 1772.", "Makes up 78% of the air you're breathing right now.", "Essential to DNA and proteins — without it, no life as we know it could exist."], "quiz": {"q": "What major industrial process combines nitrogen from the air with hydrogen to make ammonia for fertiliser?", "a": "The Haber process."}}, "O": {"facts": ["Discovered independently by Scheele and Priestley in the early 1770s.", "Makes up about 65% of your body mass, mostly as water.", "The ozone layer is a special three-atom form of oxygen (O3) that shields us from UV rays."], "quiz": {"q": "What colour is liquid oxygen, unlike the invisible gas you're breathing right now?", "a": "Pale blue."}}, "F": {"facts": ["First isolated by Henri Moissan in 1886, which won him a Nobel Prize.", "The most reactive of all elements — several early chemists were injured trying to isolate it.", "Fluoride in toothpaste strengthens tooth enamel."], "quiz": {"q": "What non-stick cooking surface is made from a fluorine-based polymer?", "a": "Teflon (PTFE)."}}, "Ne": {"facts": ["Discovered by William Ramsay and Morris Travers in 1898.", "Its name comes from the Greek 'neos', meaning 'new'.", "One of the least reactive elements known — it forms almost no chemical compounds."], "quiz": {"q": "Despite being famous for signage, roughly what share of the air around you is actually neon?", "a": "About 0.0018% — it's extremely rare in air."}}, "Na": {"facts": ["Isolated by Humphry Davy in 1807 using electrolysis.", "Reacts violently with water, often fizzing and catching fire.", "Essential for nerve signals and fluid balance in your body."], "quiz": {"q": "What everyday kitchen product is essentially sodium combined with chlorine?", "a": "Table salt (sodium chloride)."}}, "Mg": {"facts": ["Isolated by Humphry Davy in 1808.", "Burns with a brilliant white light — once used in early photography flashbulbs.", "Sits at the centre of every chlorophyll molecule in plants."], "quiz": {"q": "What powder do gymnasts and rock climbers use on their hands, made from a magnesium compound?", "a": "Magnesium carbonate (chalk)."}}, "Al": {"facts": ["Isolated by Hans Christian Ørsted in 1825.", "Was once more valuable than gold, before a cheap extraction method was found in 1886.", "Now the most widely recycled metal in everyday packaging."], "quiz": {"q": "Aluminium alloys have historically made up roughly how much of a typical aircraft's structure?", "a": "As much as 80%, though newer aircraft use more composite materials."}}, "Si": {"facts": ["Isolated by Jöns Jacob Berzelius in 1824.", "Gives Silicon Valley its name, thanks to its role in computer chips.", "The second most abundant element in Earth's crust after oxygen."], "quiz": {"q": "What natural glass, formed when lightning strikes sand, is made almost entirely of silicon dioxide?", "a": "Fulgurite."}}, "P": {"facts": ["Discovered by Hennig Brand in 1669 — while boiling down human urine searching for gold.", "Glows faintly in the dark, which is where the word 'phosphorescence' comes from.", "Makes up roughly 1% of your body mass, mostly in bones and teeth."], "quiz": {"q": "What everyday household item, invented in the 1800s, relies on a phosphorus compound to ignite?", "a": "Matches."}}, "S": {"facts": ["Known since ancient times as brimstone; confirmed as an element by Lavoisier in 1777.", "Gives rotten eggs and skunks their smell, via hydrogen sulfide.", "Used to vulcanise rubber, which is why your car tyres don't melt in the sun."], "quiz": {"q": "What skincare product category sometimes uses sulfur as an active ingredient against acne?", "a": "Acne treatment creams and lotions."}}, "Cl": {"facts": ["Discovered by Carl Wilhelm Scheele in 1774, confirmed as an element by Davy in 1810.", "Used to disinfect drinking water and swimming pools worldwide.", "Combined with hydrogen, it forms the hydrochloric acid in your stomach."], "quiz": {"q": "What colour and state is chlorine at room temperature?", "a": "A pale yellow-green gas."}}, "Ar": {"facts": ["Discovered by Lord Rayleigh and William Ramsay in 1894.", "Its name comes from the Greek 'argos', meaning 'lazy' or 'inactive'.", "Fills light bulbs and welding equipment to stop metal reacting with oxygen."], "quiz": {"q": "Roughly what share of the air you breathe is argon, the third most common gas in the atmosphere?", "a": "About 0.93%."}}, "K": {"facts": ["Isolated by Humphry Davy in 1807 — the first metal ever isolated by electrolysis.", "Reacts even more violently with water than sodium, often bursting into lilac flames.", "Essential for nerve signals and a healthy heartbeat."], "quiz": {"q": "What colour flame does potassium famously burn with?", "a": "Lilac/purple."}}, "Ca": {"facts": ["Isolated by Humphry Davy in 1808.", "Makes up about 1.5% of your body mass, almost entirely in bones and teeth.", "Its name comes from the Latin 'calx', meaning lime."], "quiz": {"q": "What cave formations, like stalactites and stalagmites, are made mostly of calcium carbonate?", "a": "Stalactites and stalagmites."}}, "Ti": {"facts": ["Discovered by William Gregor in 1791, later named after the Titans of Greek mythology.", "As strong as steel but about 45% lighter.", "The body doesn't reject it, which is why it's used in hip replacements and dental implants."], "quiz": {"q": "What white pigment, used in most white paint and sunscreen, is a titanium compound?", "a": "Titanium dioxide."}}, "Cr": {"facts": ["Discovered by Louis Nicolas Vauquelin in 1797.", "Its name comes from the Greek 'chroma', meaning colour, since its compounds are vividly coloured.", "Rubies get their red colour from traces of chromium."], "quiz": {"q": "What shiny, corrosion-resistant finish on car bumpers and taps is made using chromium?", "a": "Chrome plating."}}, "Mn": {"facts": ["Discovered by Johan Gottlieb Gahn in 1774.", "Essential for making workable steel — modern steelmaking would be impossible without it.", "Prehistoric cave painters used manganese oxide as a black pigment."], "quiz": {"q": "What common type of household battery relies on manganese dioxide?", "a": "Alkaline batteries."}}, "Fe": {"facts": ["Known since the Iron Age, with no single named discoverer.", "Haemoglobin in your blood uses iron to carry oxygen, which is why blood is red.", "Tutankhamun's dagger was made from meteorite iron, predating Egyptian iron smelting."], "quiz": {"q": "What is the chemical name for rust, formed when iron reacts with oxygen and water?", "a": "Iron oxide (hydrated iron(III) oxide)."}}, "Co": {"facts": ["Discovered by Georg Brandt between 1735 and 1739.", "Named after 'kobold', a mischievous goblin blamed by miners for troublesome ore.", "Essential for making vitamin B12 in the body."], "quiz": {"q": "What classic pigment, prized in oil painting since the 1800s, is named directly after this element?", "a": "Cobalt blue."}}, "Ni": {"facts": ["Discovered by Axel Fredrik Cronstedt in 1751.", "Named from 'kupfernickel', or 'Devil's copper', since its ore fooled miners looking for copper.", "Some people develop skin allergies from nickel in jewellery and belt buckles."], "quiz": {"q": "What alloy of nickel and copper is used to make ship propellers resistant to seawater corrosion?", "a": "Cupronickel."}}, "Cu": {"facts": ["Used since roughly 9000 BC — the Copper Age is named after it.", "One of very few metals with a natural colour other than silver, grey or gold.", "Essential trace nutrient that helps your body absorb iron."], "quiz": {"q": "What famous statue, gifted by France to the USA, is covered in a now-green copper skin?", "a": "The Statue of Liberty."}}, "Zn": {"facts": ["Isolated as a pure metal by Andreas Sigismund Marggraf in 1746, though used in brass since antiquity.", "Galvanising — coating steel in zinc — stops it rusting.", "Essential for immune function, which is why zinc lozenges are marketed for colds."], "quiz": {"q": "What alloy of copper and zinc is used to make instruments like trumpets?", "a": "Brass."}}, "As": {"facts": ["Known since antiquity, often credited to Albertus Magnus around 1250.", "Nicknamed 'the poison of kings' for its use in historical poisonings.", "Used today in gallium arsenide semiconductors for LEDs and solar cells."], "quiz": {"q": "What everyday food can contain small natural traces of arsenic absorbed from soil and water?", "a": "Rice."}}, "Se": {"facts": ["Discovered by Jöns Jacob Berzelius in 1817.", "Named after Selene, the Greek goddess of the Moon.", "An essential trace nutrient — too little causes health problems, but too much is toxic."], "quiz": {"q": "What heart condition can result from severe, long-term selenium deficiency?", "a": "Keshan disease."}}, "Br": {"facts": ["Discovered by Antoine Balard in 1826.", "Its name comes from the Greek 'bromos', meaning 'stench'.", "One of only two elements that are liquid at room temperature."], "quiz": {"q": "What discontinued early-20th-century medical use did bromine compounds have?", "a": "As sedatives ('bromides') to calm nerves."}}, "Kr": {"facts": ["Discovered by William Ramsay and Morris Travers in 1898.", "Its name comes from the Greek 'kryptos', meaning 'hidden'.", "Used in some energy-efficient window glazing and specialty flash lamps."], "quiz": {"q": "What fictional Superman material shares its name with this real element, despite not actually existing?", "a": "Kryptonite."}}, "Rb": {"facts": ["Discovered by Robert Bunsen and Gustav Kirchhoff in 1861 using the spectroscope they'd just invented.", "Named from the Latin 'rubidus', meaning 'deep red', after its spectral lines.", "Used today in atomic clocks."], "quiz": {"q": "How does rubidium's reaction with water compare to sodium's famous fizzing reaction?", "a": "It's far more violent and explosive, often igniting instantly."}}, "Sr": {"facts": ["Discovered by Adair Crawford in 1790, isolated by Humphry Davy in 1808.", "Named after Strontian, the Scottish village where its mineral was first found.", "Burns with a brilliant red flame, which is why it's used in flares and fireworks."], "quiz": {"q": "What bone-density medicine, once prescribed for osteoporosis, contained a stable strontium compound?", "a": "Strontium ranelate."}}, "Ag": {"facts": ["Used in coinage since ancient times.", "The best electrical and thermal conductor of any metal.", "Its symbol, Ag, comes from the Latin 'argentum'."], "quiz": {"q": "What old folk remedy involved dropping a silver coin into milk to help it stay fresh longer?", "a": "Silver's mild antibacterial properties really did slow spoilage slightly."}}, "Cd": {"facts": ["Discovered by Friedrich Stromeyer in 1817.", "Highly toxic and accumulates in the body — linked to 'itai-itai disease' in 20th-century Japan.", "Was once widely used in rechargeable nickel-cadmium batteries, now largely phased out."], "quiz": {"q": "Before LED technology, what vivid paint and screen pigments were often cadmium-based?", "a": "Bright yellow and orange pigments, and some older TV screen coatings."}}, "Sn": {"facts": ["Alloyed with copper to make bronze as far back as 3000 BC.", "Bending a bar of pure tin produces an audible crackle known as 'tin cry'.", "'Tin cans' are actually mostly steel with a thin protective tin coating."], "quiz": {"q": "What historical military disaster is sometimes (if debatably) linked to tin buttons crumbling in extreme cold?", "a": "Napoleon's retreat from Russia — legend blames failing tin buttons ('tin pest') for his soldiers' misery, though historians debate how big a role it really played."}}, "I": {"facts": ["Discovered by Bernard Courtois in 1811, extracted from seaweed ash.", "Essential for making thyroid hormones — deficiency causes goitre.", "Its name comes from the Greek 'iodes', meaning violet, after its vapour colour."], "quiz": {"q": "What unusual change of state does solid iodine undergo when gently heated, skipping the liquid stage?", "a": "It sublimes directly from solid to a violet gas."}}, "Xe": {"facts": ["Discovered by William Ramsay and Morris Travers in 1898.", "Long thought totally unreactive, until the first noble gas compound was made in 1962.", "Used in some car headlights for a bright white 'xenon' glow."], "quiz": {"q": "What spacecraft propulsion technology uses xenon gas as fuel for gentle but highly efficient thrust?", "a": "Ion propulsion engines."}}, "Ba": {"facts": ["Isolated by Humphry Davy in 1808.", "Its name comes from the Greek 'barys', meaning 'heavy'.", "Gives fireworks their vivid green colour."], "quiz": {"q": "Why is a 'barium meal' safe to swallow before an X-ray, despite barium compounds usually being toxic?", "a": "Barium sulfate is essentially insoluble, so it passes through the digestive system without being absorbed."}}, "W": {"facts": ["Identified by Carl Wilhelm Scheele in 1781, isolated by the Elhuyar brothers in 1783.", "Has the highest melting point of any metal, 3422°C.", "Used for over a century in incandescent light bulb filaments because of that heat resistance."], "quiz": {"q": "What precision sport uses tungsten-tipped equipment, prized for its density and durability?", "a": "Darts."}}, "Pt": {"facts": ["Studied scientifically by Antonio de Ulloa in the 1740s, after long use by pre-Columbian South Americans.", "Rarer in Earth's crust than gold.", "Used in catalytic converters to clean car exhaust emissions."], "quiz": {"q": "Platinum jewellery is often recommended over gold for people with what kind of condition?", "a": "Metal allergies — platinum is highly hypoallergenic."}}, "Au": {"facts": ["Treasured by nearly every civilisation since prehistoric times.", "So unreactive it's found in nature as pure metal nuggets, needing no chemistry to use it.", "A single gram can be hammered into a sheet almost a square metre in size."], "quiz": {"q": "What's the main practical drawback of 24-karat gold jewellery compared to lower-karat gold?", "a": "Pure gold is very soft, so it scratches and dents far more easily."}}, "Hg": {"facts": ["Used by the ancient Egyptians and Chinese thousands of years ago.", "The only metal that's liquid at room temperature.", "Gave rise to the phrase 'mad as a hatter', from mercury poisoning in the felt hat industry."], "quiz": {"q": "What planet in our solar system shares this element's name, both linked to a fast-moving Roman god?", "a": "The planet Mercury, named for its fast orbit around the Sun."}}, "Pb": {"facts": ["Used by the Romans, notably for water pipes — the word 'plumbing' comes from 'plumbum', Latin for lead.", "Leaded petrol and leaded paint were phased out in the late 20th century once health risks were understood.", "Still used today in car batteries and radiation shielding."], "quiz": {"q": "What sport uses lead weights strapped to a belt to help divers sink underwater?", "a": "Scuba diving and freediving."}}, "U": {"facts": ["Discovered by Martin Heinrich Klaproth in 1789, named after the recently discovered planet Uranus.", "Used in early 20th-century glassmaking for a yellow-green glow, before its radioactivity was understood.", "Powers both nuclear reactors and, historically, the first atomic weapons."], "quiz": {"q": "What proportion of naturally occurring uranium is the fissile isotope U-235 used in reactors, meaning the rest must be 'enriched' away?", "a": "About 0.7% — the remaining 99.3% is mostly non-fissile U-238."}}};
+const elementData = {"H": {"number": 1, "name": "Hydrogen", "mass": "1.008", "detail": ["~0.14% of crust (mostly combined in water)", "Rocket fuel; making ammonia for fertiliser; hydrogenating fats", "Gas", "-259°C", "-253°C", "Almost never found free — combined in water and hydrocarbons", "Not mined — made from water or natural gas", "Produced industrially worldwide (<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia)"]}, "He": {"number": 2, "name": "Helium", "mass": "4.003", "detail": ["Trace in crust; found in natural gas", "Balloons and airships; cooling MRI magnets", "Gas", "-272°C (under pressure)", "-269°C", "Trapped in natural gas deposits from radioactive decay", "Extracted from natural gas, not a solid ore", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><polygon points=\"9,0 30,0 30,20 9,20 12,18.2 9.5,16.4 12,14.5 9.5,12.7 12,10.9 9.5,9.1 12,7.3 9.5,5.5 12,3.6 9.5,1.8\" fill=\"#8D1B3D\"/></svg></span> Qatar, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"15\" height=\"20\" fill=\"#006233\"/><rect x=\"15\" width=\"15\" height=\"20\" fill=\"#fff\"/><circle cx=\"15\" cy=\"10\" r=\"3.6\" fill=\"none\" stroke=\"#D21034\" stroke-width=\"0.8\"/><circle cx=\"16.5\" cy=\"10\" r=\"3.4\" fill=\"#fff\"/><polygon points=\"17.5,7 18.1,8.8 20,8.8 18.5,9.9 19.1,11.7 17.5,10.6 15.9,11.7 16.5,9.9 15,8.8 16.9,8.8\" fill=\"#D21034\"/></svg></span> Algeria"]}, "Li": {"number": 3, "name": "Lithium", "mass": "6.94", "detail": ["~20 ppm of crust", "Rechargeable batteries", "Solid", "180°C", "1342°C", "Igneous rocks and salt-lake brine", "Spodumene; lithium brine", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"10\" fill=\"#fff\"/><rect y=\"10\" width=\"30\" height=\"10\" fill=\"#D52B1E\"/><rect width=\"10\" height=\"10\" fill=\"#0039A6\"/><polygon points=\"5,3 5.6,4.8 7.5,4.8 6,5.9 6.6,7.7 5,6.6 3.4,7.7 4,5.9 2.5,4.8 4.4,4.8\" fill=\"#fff\"/></svg></span> Chile, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Be": {"number": 4, "name": "Beryllium", "mass": "9.012", "detail": ["~2.8 ppm of crust", "Aerospace alloys; X-ray equipment windows", "Solid", "1287°C", "2470°C", "Found in beryl-bearing rocks", "Beryl; bertrandite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "B": {"number": 5, "name": "Boron", "mass": "10.81", "detail": ["~10 ppm of crust", "Borosilicate glass; detergents; semiconductors", "Solid", "2076°C", "3927°C", "Evaporite deposits from ancient lakes", "Borax; kernite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#E30A17\"/><circle cx=\"12.5\" cy=\"10\" r=\"4.2\" fill=\"#fff\"/><circle cx=\"13.7\" cy=\"10\" r=\"3.4\" fill=\"#E30A17\"/><polygon points=\"18,7.2 18.6,9 20.5,9 19,10.1 19.6,11.9 18,10.8 16.4,11.9 17,10.1 15.5,9 17.4,9\" fill=\"#fff\"/></svg></span> Turkey, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA"]}, "C": {"number": 6, "name": "Carbon", "mass": "12.01", "detail": ["~480 ppm of crust", "Fuels; steelmaking; diamond tools; graphite electrodes", "Solid", "~3550°C (sublimes)", "~4827°C", "Coal, petroleum, graphite and diamond deposits", "Coal; graphite; diamond ore (kimberlite)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China (graphite); <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#75AADB\"/><rect y=\"8\" width=\"30\" height=\"4\" fill=\"#fff\"/><rect y=\"9\" width=\"30\" height=\"2\" fill=\"#000\"/></svg></span> Botswana, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><rect x=\"7.5\" width=\"15\" height=\"20\" fill=\"#fff\"/><rect x=\"22.5\" width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><polygon points=\"15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8\" fill=\"#FF0000\"/></svg></span> Canada (diamonds)"]}, "N": {"number": 7, "name": "Nitrogen", "mass": "14.01", "detail": ["Trace in crust; 78% of the atmosphere", "Fertilisers (via the Haber process); food packaging", "Gas", "-210°C", "-196°C", "The atmosphere", "None — extracted from liquid air", "Produced globally from air"]}, "O": {"number": 8, "name": "Oxygen", "mass": "16.00", "detail": ["~46% of crust (the most abundant element)", "Steelmaking; medical oxygen; life support", "Gas", "-218°C", "-183°C", "The atmosphere and water", "None — extracted from liquid air", "Produced globally from air"]}, "F": {"number": 9, "name": "Fluorine", "mass": "19.00", "detail": ["~585 ppm of crust", "Toothpaste; Teflon coatings; refrigerant gases", "Gas", "-220°C", "-188°C", "Fluorite-bearing rock", "Fluorite; fluorapatite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"10\" height=\"20\" fill=\"#006847\"/><rect x=\"10\" width=\"10\" height=\"20\" fill=\"#fff\"/><rect x=\"20\" width=\"10\" height=\"20\" fill=\"#CE1126\"/><circle cx=\"15\" cy=\"10\" r=\"2.2\" fill=\"#8B5A2B\"/></svg></span> Mexico, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"10\" height=\"20\" fill=\"#C4272F\"/><rect x=\"10\" width=\"10\" height=\"20\" fill=\"#015197\"/><rect x=\"20\" width=\"10\" height=\"20\" fill=\"#C4272F\"/><circle cx=\"5\" cy=\"7\" r=\"1.3\" fill=\"#F9CF02\"/><rect x=\"4.3\" y=\"8.5\" width=\"1.4\" height=\"4\" fill=\"#F9CF02\"/></svg></span> Mongolia"]}, "Ne": {"number": 10, "name": "Neon", "mass": "20.18", "detail": ["Trace — 18 ppm of air by volume", "Neon signs and specialty lighting", "Gas", "-249°C", "-246°C", "The atmosphere", "None — extracted from liquid air", "Produced globally from air"]}, "Na": {"number": 11, "name": "Sodium", "mass": "22.99", "detail": ["~2.3% of crust", "Table salt; sodium street lighting; soap making", "Solid", "98°C", "883°C", "Rock salt deposits and seawater", "Halite (rock salt)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"6.67\" fill=\"#FF9933\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#138808\"/><circle cx=\"15\" cy=\"10\" r=\"2\" fill=\"none\" stroke=\"#000080\" stroke-width=\"0.35\"/></svg></span> India"]}, "Mg": {"number": 12, "name": "Magnesium", "mass": "24.31", "detail": ["~2.3% of crust", "Lightweight alloys for aircraft and cars; fireworks", "Solid", "650°C", "1090°C", "Seawater and magnesium-rich rock", "Magnesite; dolomite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Al": {"number": 13, "name": "Aluminium", "mass": "26.98", "detail": ["~8.2% of crust (the most abundant metal)", "Drink cans; aircraft bodies; kitchen foil", "Solid", "660°C", "2470°C", "Bauxite-rich tropical soils", "Bauxite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#CE1126\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#FCD116\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#009460\"/></svg></span> Guinea"]}, "Si": {"number": 14, "name": "Silicon", "mass": "28.09", "detail": ["~28% of crust (2nd most abundant element)", "Computer chips; glass; solar panels", "Solid", "1414°C", "3265°C", "Sand and quartz deposits", "Quartz (silicon dioxide)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "P": {"number": 15, "name": "Phosphorus", "mass": "30.97", "detail": ["~1050 ppm of crust", "Fertilisers; matches; detergents", "Solid", "44°C (white P)", "280°C (white P)", "Phosphate-rich sedimentary rock", "Apatite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#C1272D\"/><polygon points=\"15,6.5 16,9.2 19,9.2 16.5,11 17.5,13.7 15,12 12.5,13.7 13.5,11 11,9.2 14,9.2\" fill=\"none\" stroke=\"#006233\" stroke-width=\"0.6\"/></svg></span> Morocco, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA"]}, "S": {"number": 16, "name": "Sulfur", "mass": "32.06", "detail": ["~350 ppm of crust", "Sulfuric acid production; fertilisers; vulcanising rubber", "Solid", "115°C", "445°C", "Volcanic deposits; natural gas and oil refining", "Native sulfur; pyrite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia"]}, "Cl": {"number": 17, "name": "Chlorine", "mass": "35.45", "detail": ["~145 ppm of crust; abundant as chloride in seawater", "Water purification; PVC plastic; bleach", "Gas", "-101°C", "-34°C", "Rock salt and seawater", "Halite (via electrolysis of brine)", "Produced worldwide from brine"]}, "Ar": {"number": 18, "name": "Argon", "mass": "39.95", "detail": ["Trace in crust; 0.93% of the atmosphere", "Inert shielding gas for welding; light bulb filling", "Gas", "-189°C", "-186°C", "The atmosphere", "None — extracted from liquid air", "Produced globally from air"]}, "K": {"number": 19, "name": "Potassium", "mass": "39.10", "detail": ["~2.1% of crust", "Potash fertilisers; soap making", "Solid", "64°C", "759°C", "Evaporite potash deposits", "Sylvite; carnallite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><rect x=\"7.5\" width=\"15\" height=\"20\" fill=\"#fff\"/><rect x=\"22.5\" width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><polygon points=\"15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8\" fill=\"#FF0000\"/></svg></span> Canada, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"13.3\" fill=\"#D22730\"/><rect y=\"13.3\" width=\"30\" height=\"6.7\" fill=\"#00AF66\"/><rect width=\"3\" height=\"20\" fill=\"#fff\"/><g fill=\"#D22730\"><rect x=\"0.4\" y=\"1\" width=\"0.6\" height=\"0.6\"/><rect x=\"1.4\" y=\"1\" width=\"0.6\" height=\"0.6\"/><rect x=\"0.4\" y=\"2\" width=\"0.6\" height=\"0.6\"/><rect x=\"1.4\" y=\"2\" width=\"0.6\" height=\"0.6\"/></g></svg></span> Belarus"]}, "Ca": {"number": 20, "name": "Calcium", "mass": "40.08", "detail": ["~4.2% of crust (5th most abundant element)", "Cement; bones and teeth; steelmaking", "Solid", "842°C", "1484°C", "Limestone and gypsum deposits", "Limestone; gypsum", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China and worldwide"]}, "Sc": {"number": 21, "name": "Scandium", "mass": "44.96", "detail": null}, "Ti": {"number": 22, "name": "Titanium", "mass": "47.87", "detail": ["~5650 ppm of crust", "Aircraft parts; white paint pigment; medical implants", "Solid", "1668°C", "3287°C", "Titanium-rich mineral sands", "Ilmenite; rutile", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><polygon points=\"0,0 12,10 0,20\" fill=\"#000\"/><polygon points=\"0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5\" fill=\"#007A4D\"/><polygon points=\"0,3.3 0,16.7 9,10\" fill=\"#FFB612\"/><polygon points=\"0,6.6 0,13.4 6,10\" fill=\"#DE3831\"/><rect y=\"8.5\" width=\"30\" height=\"3\" fill=\"#001489\"/><rect y=\"7\" width=\"30\" height=\"1\" fill=\"#fff\"/><rect y=\"12\" width=\"30\" height=\"1\" fill=\"#fff\"/></svg></span> South Africa"]}, "V": {"number": 23, "name": "Vanadium", "mass": "50.94", "detail": null}, "Cr": {"number": 24, "name": "Chromium", "mass": "52.00", "detail": ["~102 ppm of crust", "Stainless steel; chrome plating", "Solid", "1907°C", "2671°C", "Chromite-rich rock", "Chromite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><polygon points=\"0,0 12,10 0,20\" fill=\"#000\"/><polygon points=\"0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5\" fill=\"#007A4D\"/><polygon points=\"0,3.3 0,16.7 9,10\" fill=\"#FFB612\"/><polygon points=\"0,6.6 0,13.4 6,10\" fill=\"#DE3831\"/><rect y=\"8.5\" width=\"30\" height=\"3\" fill=\"#001489\"/><rect y=\"7\" width=\"30\" height=\"1\" fill=\"#fff\"/><rect y=\"12\" width=\"30\" height=\"1\" fill=\"#fff\"/></svg></span> South Africa, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00AFCA\"/><circle cx=\"15\" cy=\"9\" r=\"3.2\" fill=\"#FEC50C\"/><g stroke=\"#FEC50C\" stroke-width=\"0.35\"><line x1=\"15\" y1=\"2.5\" x2=\"15\" y2=\"5.3\"/><line x1=\"15\" y1=\"12.7\" x2=\"15\" y2=\"15.5\"/><line x1=\"8.5\" y1=\"9\" x2=\"11.3\" y2=\"9\"/><line x1=\"18.7\" y1=\"9\" x2=\"21.5\" y2=\"9\"/><line x1=\"10.4\" y1=\"4.4\" x2=\"12.3\" y2=\"6.3\"/><line x1=\"17.7\" y1=\"11.7\" x2=\"19.6\" y2=\"13.6\"/><line x1=\"19.6\" y1=\"4.4\" x2=\"17.7\" y2=\"6.3\"/><line x1=\"12.3\" y1=\"11.7\" x2=\"10.4\" y2=\"13.6\"/></g></svg></span> Kazakhstan, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"6.67\" fill=\"#FF9933\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#138808\"/><circle cx=\"15\" cy=\"10\" r=\"2\" fill=\"none\" stroke=\"#000080\" stroke-width=\"0.35\"/></svg></span> India"]}, "Mn": {"number": 25, "name": "Manganese", "mass": "54.94", "detail": ["~950 ppm of crust", "Strengthening steel; batteries", "Solid", "1246°C", "2061°C", "Manganese-rich sedimentary deposits", "Pyrolusite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><polygon points=\"0,0 12,10 0,20\" fill=\"#000\"/><polygon points=\"0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5\" fill=\"#007A4D\"/><polygon points=\"0,3.3 0,16.7 9,10\" fill=\"#FFB612\"/><polygon points=\"0,6.6 0,13.4 6,10\" fill=\"#DE3831\"/><rect y=\"8.5\" width=\"30\" height=\"3\" fill=\"#001489\"/><rect y=\"7\" width=\"30\" height=\"1\" fill=\"#fff\"/><rect y=\"12\" width=\"30\" height=\"1\" fill=\"#fff\"/></svg></span> South Africa, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Fe": {"number": 26, "name": "Iron", "mass": "55.85", "detail": ["~5.6% of crust (4th most abundant element)", "Steel for construction, tools and vehicles", "Solid", "1538°C", "2862°C", "Iron-rich sedimentary rock", "Hematite; magnetite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#009739\"/><polygon points=\"15,3 27,10 15,17 3,10\" fill=\"#FEDD00\"/><circle cx=\"15\" cy=\"10\" r=\"4\" fill=\"#012169\"/></svg></span> Brazil, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Co": {"number": 27, "name": "Cobalt", "mass": "58.93", "detail": ["~25 ppm of crust", "Rechargeable lithium-ion batteries; magnets; blue pigment", "Solid", "1495°C", "2927°C", "Often a byproduct of copper and nickel mining", "Cobaltite; byproduct of Cu/Ni ores", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#007FFF\"/><polygon points=\"0,20 4,20 30,2 30,0 26,0\" fill=\"#F7D618\"/><polygon points=\"0.7,20 3,20 30,1 27.7,1\" fill=\"#CE1021\"/><polygon points=\"21.5,3 22.1,4.8 24,4.8 22.5,5.9 23.1,7.7 21.5,6.6 19.9,7.7 20.5,5.9 19,4.8 20.9,4.8\" fill=\"#F7D618\"/></svg></span> Democratic Republic of Congo (about 70% of supply)"]}, "Ni": {"number": 28, "name": "Nickel", "mass": "58.69", "detail": ["~84 ppm of crust", "Stainless steel; batteries; coins", "Solid", "1455°C", "2913°C", "Nickel-rich igneous and laterite rock", "Pentlandite; laterite ores", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"10.00\" fill=\"#FF0000\"/><rect y=\"10.00\" width=\"30\" height=\"10.00\" fill=\"#fff\"/></svg></span> Indonesia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"10\" fill=\"#0038A8\"/><rect y=\"10\" width=\"30\" height=\"10\" fill=\"#CE1126\"/><polygon points=\"0,0 13,10 0,20\" fill=\"#fff\"/><circle cx=\"4\" cy=\"10\" r=\"1.6\" fill=\"#FCD116\"/></svg></span> Philippines, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia"]}, "Cu": {"number": 29, "name": "Copper", "mass": "63.55", "detail": ["~60 ppm of crust", "Electrical wiring; plumbing pipes; coins", "Solid", "1085°C", "2562°C", "Copper-rich ore bodies", "Chalcopyrite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"10\" fill=\"#fff\"/><rect y=\"10\" width=\"30\" height=\"10\" fill=\"#D52B1E\"/><rect width=\"10\" height=\"10\" fill=\"#0039A6\"/><polygon points=\"5,3 5.6,4.8 7.5,4.8 6,5.9 6.6,7.7 5,6.6 3.4,7.7 4,5.9 2.5,4.8 4.4,4.8\" fill=\"#fff\"/></svg></span> Chile, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#fff\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/></svg></span> Peru, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Zn": {"number": 30, "name": "Zinc", "mass": "65.39", "detail": ["~70 ppm of crust", "Galvanising steel; batteries; brass alloy", "Solid", "420°C", "907°C", "Zinc-rich ore bodies", "Sphalerite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#fff\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/></svg></span> Peru, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia"]}, "Ga": {"number": 31, "name": "Gallium", "mass": "69.72", "detail": null}, "Ge": {"number": 32, "name": "Germanium", "mass": "72.63", "detail": null}, "As": {"number": 33, "name": "Arsenic", "mass": "74.92", "detail": ["~1.8 ppm of crust", "Semiconductors; historically wood preservatives and pesticides", "Solid (metalloid)", "817°C (under pressure)", "614°C (sublimes)", "Often a byproduct of smelting other metal ores", "Arsenopyrite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#C1272D\"/><polygon points=\"15,6.5 16,9.2 19,9.2 16.5,11 17.5,13.7 15,12 12.5,13.7 13.5,11 11,9.2 14,9.2\" fill=\"none\" stroke=\"#006233\" stroke-width=\"0.6\"/></svg></span> Morocco, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia"]}, "Se": {"number": 34, "name": "Selenium", "mass": "78.96", "detail": ["~0.05 ppm of crust", "Solar cells; glass decolourising; photocopier drums", "Solid", "221°C", "685°C", "Byproduct of copper refining", "Byproduct of copper ore processing", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#000\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#DD0000\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#FFCE00\"/></svg></span> Germany, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><circle cx=\"15\" cy=\"10\" r=\"5.6\" fill=\"#BC002D\"/></svg></span> Japan, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#000\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#FDDA24\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#EF3340\"/></svg></span> Belgium (major refiners)"]}, "Br": {"number": 35, "name": "Bromine", "mass": "79.90", "detail": ["~2.4 ppm of crust; concentrated in seawater/brine", "Flame retardants; photographic film", "Liquid", "-7°C", "59°C", "Seawater and salt-lake brine", "Extracted from brine, not a solid ore", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><rect y=\"2.4\" width=\"30\" height=\"2\" fill=\"#0038B8\"/><rect y=\"15.6\" width=\"30\" height=\"2\" fill=\"#0038B8\"/><polygon points=\"15,7 17,10.5 13,10.5\" fill=\"none\" stroke=\"#0038B8\" stroke-width=\"0.5\"/><polygon points=\"15,13 13,9.5 17,9.5\" fill=\"none\" stroke=\"#0038B8\" stroke-width=\"0.5\"/></svg></span> Israel, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Kr": {"number": 36, "name": "Krypton", "mass": "83.80", "detail": ["Trace — 1.1 ppm of air by volume", "Photographic flash lamps; specialty lighting", "Gas", "-157°C", "-153°C", "The atmosphere", "None — extracted from liquid air", "Produced globally from air"]}, "Rb": {"number": 37, "name": "Rubidium", "mass": "85.47", "detail": ["~90 ppm of crust", "Atomic clocks; specialty glass", "Solid", "39°C", "688°C", "Found in lepidolite and other silicate minerals", "Lepidolite; byproduct of lithium/caesium processing", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><rect x=\"7.5\" width=\"15\" height=\"20\" fill=\"#fff\"/><rect x=\"22.5\" width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><polygon points=\"15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8\" fill=\"#FF0000\"/></svg></span> Canada and byproduct sources worldwide"]}, "Sr": {"number": 38, "name": "Strontium", "mass": "87.62", "detail": ["~370 ppm of crust", "Red colour in fireworks; ferrite magnets", "Solid", "777°C", "1382°C", "Celestine-rich sedimentary rock", "Celestite (strontium sulfate)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"5\" fill=\"#AA151B\"/><rect y=\"5\" width=\"30\" height=\"10\" fill=\"#F1BF00\"/><rect y=\"15\" width=\"30\" height=\"5\" fill=\"#AA151B\"/></svg></span> Spain, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"6.67\" fill=\"#74ACDF\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#74ACDF\"/><circle cx=\"15\" cy=\"10\" r=\"1.8\" fill=\"#F6B40E\"/></svg></span> Argentina"]}, "Y": {"number": 39, "name": "Yttrium", "mass": "88.91", "detail": null}, "Zr": {"number": 40, "name": "Zirconium", "mass": "91.22", "detail": null}, "Nb": {"number": 41, "name": "Niobium", "mass": "92.91", "detail": null}, "Mo": {"number": 42, "name": "Molybdenum", "mass": "95.96", "detail": null}, "Tc": {"number": 43, "name": "Technetium", "mass": "(98)", "detail": null}, "Ru": {"number": 44, "name": "Ruthenium", "mass": "101.1", "detail": null}, "Rh": {"number": 45, "name": "Rhodium", "mass": "102.9", "detail": null}, "Pd": {"number": 46, "name": "Palladium", "mass": "106.4", "detail": null}, "Ag": {"number": 47, "name": "Silver", "mass": "107.9", "detail": ["~0.075 ppm of crust", "Jewellery; electrical contacts; antibacterial coatings", "Solid", "962°C", "2162°C", "Often a byproduct of lead, zinc and copper mining", "Argentite; byproduct ores", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"10\" height=\"20\" fill=\"#006847\"/><rect x=\"10\" width=\"10\" height=\"20\" fill=\"#fff\"/><rect x=\"20\" width=\"10\" height=\"20\" fill=\"#CE1126\"/><circle cx=\"15\" cy=\"10\" r=\"2.2\" fill=\"#8B5A2B\"/></svg></span> Mexico, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#fff\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/></svg></span> Peru, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China"]}, "Cd": {"number": 48, "name": "Cadmium", "mass": "112.4", "detail": ["~0.15 ppm of crust", "Rechargeable nickel-cadmium batteries; pigments", "Solid", "321°C", "767°C", "Byproduct of zinc ore refining", "Byproduct of sphalerite (zinc ore)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><circle cx=\"15\" cy=\"10\" r=\"3.5\" fill=\"#CD2E3A\"/><path d=\"M15,6.5 A1.75,1.75 0 0 1 15,10 A1.75,1.75 0 0 0 15,13.5 A3.5,3.5 0 0 0 15,6.5\" fill=\"#0047A0\"/></svg></span> South Korea, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><circle cx=\"15\" cy=\"10\" r=\"5.6\" fill=\"#BC002D\"/></svg></span> Japan"]}, "In": {"number": 49, "name": "Indium", "mass": "114.8", "detail": null}, "Sn": {"number": 50, "name": "Tin", "mass": "118.7", "detail": ["~2.3 ppm of crust", "Tin-plated food cans; solder; bronze alloy", "Solid", "232°C", "2602°C", "Cassiterite-rich alluvial deposits", "Cassiterite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"10.00\" fill=\"#FF0000\"/><rect y=\"10.00\" width=\"30\" height=\"10.00\" fill=\"#fff\"/></svg></span> Indonesia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"6.67\" fill=\"#FECB00\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#34B233\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#EA2839\"/><polygon points=\"15,7 15.9,9.7 18.8,9.7 16.5,11.4 17.4,14.1 15,12.4 12.6,14.1 13.5,11.4 11.2,9.7 14.1,9.7\" fill=\"#fff\"/></svg></span> Myanmar"]}, "Sb": {"number": 51, "name": "Antimony", "mass": "121.8", "detail": null}, "Te": {"number": 52, "name": "Tellurium", "mass": "127.6", "detail": null}, "I": {"number": 53, "name": "Iodine", "mass": "126.9", "detail": ["~0.45 ppm of crust", "Antiseptics; iodised table salt; medical imaging", "Solid", "114°C", "184°C", "Brine deposits and caliche rock", "Extracted from brine and caliche deposits", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"10\" fill=\"#fff\"/><rect y=\"10\" width=\"30\" height=\"10\" fill=\"#D52B1E\"/><rect width=\"10\" height=\"10\" fill=\"#0039A6\"/><polygon points=\"5,3 5.6,4.8 7.5,4.8 6,5.9 6.6,7.7 5,6.6 3.4,7.7 4,5.9 2.5,4.8 4.4,4.8\" fill=\"#fff\"/></svg></span> Chile, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><circle cx=\"15\" cy=\"10\" r=\"5.6\" fill=\"#BC002D\"/></svg></span> Japan, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA"]}, "Xe": {"number": 54, "name": "Xenon", "mass": "131.3", "detail": ["Trace — 0.087 ppm of air by volume", "Specialty lighting; ion propulsion for spacecraft; anaesthesia", "Gas", "-112°C", "-108°C", "The atmosphere", "None — extracted from liquid air", "Produced globally from air"]}, "Cs": {"number": 55, "name": "Caesium", "mass": "132.9", "detail": null}, "Ba": {"number": 56, "name": "Barium", "mass": "137.3", "detail": ["~425 ppm of crust", "Drilling mud for oil and gas wells; barium meals in medical imaging", "Solid", "727°C", "1897°C", "Barite-rich sedimentary rock", "Barite (barium sulfate)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"6.67\" fill=\"#FF9933\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#138808\"/><circle cx=\"15\" cy=\"10\" r=\"2\" fill=\"none\" stroke=\"#000080\" stroke-width=\"0.35\"/></svg></span> India, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#C1272D\"/><polygon points=\"15,6.5 16,9.2 19,9.2 16.5,11 17.5,13.7 15,12 12.5,13.7 13.5,11 11,9.2 14,9.2\" fill=\"none\" stroke=\"#006233\" stroke-width=\"0.6\"/></svg></span> Morocco"]}, "Hf": {"number": 72, "name": "Hafnium", "mass": "178.5", "detail": null}, "Ta": {"number": 73, "name": "Tantalum", "mass": "180.9", "detail": null}, "W": {"number": 74, "name": "Tungsten", "mass": "183.8", "detail": ["~1.25 ppm of crust", "Light bulb filaments; drill bits; jewellery", "Solid", "3422°C (highest of any metal)", "5555°C", "Tungsten-rich vein deposits", "Wolframite; scheelite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China (over 80% of supply)"]}, "Re": {"number": 75, "name": "Rhenium", "mass": "186.2", "detail": null}, "Os": {"number": 76, "name": "Osmium", "mass": "190.2", "detail": null}, "Ir": {"number": 77, "name": "Iridium", "mass": "192.2", "detail": null}, "Pt": {"number": 78, "name": "Platinum", "mass": "195.1", "detail": ["~0.005 ppm of crust (very rare)", "Catalytic converters; jewellery; laboratory equipment", "Solid", "1768°C", "3825°C", "Platinum-rich igneous rock", "Native platinum; sperrylite", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#fff\"/><polygon points=\"0,0 12,10 0,20\" fill=\"#000\"/><polygon points=\"0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5\" fill=\"#007A4D\"/><polygon points=\"0,3.3 0,16.7 9,10\" fill=\"#FFB612\"/><polygon points=\"0,6.6 0,13.4 6,10\" fill=\"#DE3831\"/><rect y=\"8.5\" width=\"30\" height=\"3\" fill=\"#001489\"/><rect y=\"7\" width=\"30\" height=\"1\" fill=\"#fff\"/><rect y=\"12\" width=\"30\" height=\"1\" fill=\"#fff\"/></svg></span> South Africa (about 70% of supply), <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia"]}, "Au": {"number": 79, "name": "Gold", "mass": "197.0", "detail": ["~0.004 ppm of crust (very rare)", "Jewellery; electronics connectors; reserve currency", "Solid", "1064°C", "2856°C", "Native deposits and river placer gravel", "Native gold", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg></span> Russia"]}, "Hg": {"number": 80, "name": "Mercury", "mass": "200.6", "detail": ["~0.085 ppm of crust", "Fluorescent lamps; historically thermometers and dental fillings", "Liquid (only metal liquid at room temperature)", "-39°C", "357°C", "Cinnabar-rich deposits", "Cinnabar (mercury sulfide)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"10\" height=\"20\" fill=\"#006847\"/><rect x=\"10\" width=\"10\" height=\"20\" fill=\"#fff\"/><rect x=\"20\" width=\"10\" height=\"20\" fill=\"#CE1126\"/><circle cx=\"15\" cy=\"10\" r=\"2.2\" fill=\"#8B5A2B\"/></svg></span> Mexico, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#E8112D\"/><circle cx=\"15\" cy=\"10\" r=\"4\" fill=\"#FFEF00\"/><circle cx=\"15\" cy=\"10\" r=\"1.6\" fill=\"none\" stroke=\"#E8112D\" stroke-width=\"0.4\"/><g stroke=\"#FFEF00\" stroke-width=\"0.3\"><line x1=\"15\" y1=\"4.2\" x2=\"15\" y2=\"6.2\"/><line x1=\"15\" y1=\"13.8\" x2=\"15\" y2=\"15.8\"/><line x1=\"9.2\" y1=\"10\" x2=\"11.2\" y2=\"10\"/><line x1=\"18.8\" y1=\"10\" x2=\"20.8\" y2=\"10\"/></g></svg></span> Kyrgyzstan"]}, "Tl": {"number": 81, "name": "Thallium", "mass": "204.4", "detail": null}, "Pb": {"number": 82, "name": "Lead", "mass": "207.2", "detail": ["~14 ppm of crust", "Car batteries; radiation shielding", "Solid", "327°C", "1749°C", "Lead-rich ore bodies", "Galena", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#DE2910\"/><g fill=\"#FFDE00\"><polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/><circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/></g></svg></span> China, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00247D\"/><rect width=\"15\" height=\"10\" fill=\"#00247D\"/><g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/><line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/><g fill=\"#fff\"><polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/><polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/><polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/><polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/><circle cx=\"17\" cy=\"16\" r=\"0.6\"/></g></svg></span> Australia, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#B22234\"/><g fill=\"#fff\"><rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/><rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/><rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/></g><rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/></svg></span> USA"]}, "Bi": {"number": 83, "name": "Bismuth", "mass": "209.0", "detail": null}, "Po": {"number": 84, "name": "Polonium", "mass": "(209)", "detail": null}, "At": {"number": 85, "name": "Astatine", "mass": "(210)", "detail": null}, "Rn": {"number": 86, "name": "Radon", "mass": "(222)", "detail": null}, "Fr": {"number": 87, "name": "Francium", "mass": "(223)", "detail": null}, "Ra": {"number": 88, "name": "Radium", "mass": "(226)", "detail": null}, "Rf": {"number": 104, "name": "Rutherfordium", "mass": "(267)", "detail": null}, "Db": {"number": 105, "name": "Dubnium", "mass": "(268)", "detail": null}, "Sg": {"number": 106, "name": "Seaborgium", "mass": "(271)", "detail": null}, "Bh": {"number": 107, "name": "Bohrium", "mass": "(272)", "detail": null}, "Hs": {"number": 108, "name": "Hassium", "mass": "(270)", "detail": null}, "Mt": {"number": 109, "name": "Meitnerium", "mass": "(276)", "detail": null}, "Ds": {"number": 110, "name": "Darmstadtium", "mass": "(281)", "detail": null}, "Rg": {"number": 111, "name": "Roentgenium", "mass": "(280)", "detail": null}, "Cn": {"number": 112, "name": "Copernicium", "mass": "(285)", "detail": null}, "Nh": {"number": 113, "name": "Nihonium", "mass": "(284)", "detail": null}, "Fl": {"number": 114, "name": "Flerovium", "mass": "(289)", "detail": null}, "Mc": {"number": 115, "name": "Moscovium", "mass": "(288)", "detail": null}, "Lv": {"number": 116, "name": "Livermorium", "mass": "(293)", "detail": null}, "Ts": {"number": 117, "name": "Tennessine", "mass": "(294)", "detail": null}, "Og": {"number": 118, "name": "Oganesson", "mass": "(294)", "detail": null}, "La": {"number": 57, "name": "Lanthanum", "mass": "138.9", "detail": null}, "Ce": {"number": 58, "name": "Cerium", "mass": "140.1", "detail": null}, "Pr": {"number": 59, "name": "Praseodymium", "mass": "140.9", "detail": null}, "Nd": {"number": 60, "name": "Neodymium", "mass": "144.2", "detail": null}, "Pm": {"number": 61, "name": "Promethium", "mass": "(145)", "detail": null}, "Sm": {"number": 62, "name": "Samarium", "mass": "150.4", "detail": null}, "Eu": {"number": 63, "name": "Europium", "mass": "152.0", "detail": null}, "Gd": {"number": 64, "name": "Gadolinium", "mass": "157.3", "detail": null}, "Tb": {"number": 65, "name": "Terbium", "mass": "158.9", "detail": null}, "Dy": {"number": 66, "name": "Dysprosium", "mass": "162.5", "detail": null}, "Ho": {"number": 67, "name": "Holmium", "mass": "164.9", "detail": null}, "Er": {"number": 68, "name": "Erbium", "mass": "167.3", "detail": null}, "Tm": {"number": 69, "name": "Thulium", "mass": "168.9", "detail": null}, "Yb": {"number": 70, "name": "Ytterbium", "mass": "173.0", "detail": null}, "Lu": {"number": 71, "name": "Lutetium", "mass": "175.0", "detail": null}, "Ac": {"number": 89, "name": "Actinium", "mass": "(227)", "detail": null}, "Th": {"number": 90, "name": "Thorium", "mass": "232.0", "detail": null}, "Pa": {"number": 91, "name": "Protactinium", "mass": "231.0", "detail": null}, "U": {"number": 92, "name": "Uranium", "mass": "238.0", "detail": ["~2.7 ppm of crust", "Nuclear fuel", "Solid", "1132°C", "4131°C", "Uranium-rich sedimentary and igneous deposits", "Uraninite (pitchblende)", "<span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"30\" height=\"20\" fill=\"#00AFCA\"/><circle cx=\"15\" cy=\"9\" r=\"3.2\" fill=\"#FEC50C\"/><g stroke=\"#FEC50C\" stroke-width=\"0.35\"><line x1=\"15\" y1=\"2.5\" x2=\"15\" y2=\"5.3\"/><line x1=\"15\" y1=\"12.7\" x2=\"15\" y2=\"15.5\"/><line x1=\"8.5\" y1=\"9\" x2=\"11.3\" y2=\"9\"/><line x1=\"18.7\" y1=\"9\" x2=\"21.5\" y2=\"9\"/><line x1=\"10.4\" y1=\"4.4\" x2=\"12.3\" y2=\"6.3\"/><line x1=\"17.7\" y1=\"11.7\" x2=\"19.6\" y2=\"13.6\"/><line x1=\"19.6\" y1=\"4.4\" x2=\"17.7\" y2=\"6.3\"/><line x1=\"12.3\" y1=\"11.7\" x2=\"10.4\" y2=\"13.6\"/></g></svg></span> Kazakhstan (about 40% of supply), <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><rect width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><rect x=\"7.5\" width=\"15\" height=\"20\" fill=\"#fff\"/><rect x=\"22.5\" width=\"7.5\" height=\"20\" fill=\"#FF0000\"/><polygon points=\"15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8\" fill=\"#FF0000\"/></svg></span> Canada, <span class=\"inline-flag\"><svg viewBox=\"0 0 30 20\"><polygon points=\"0,0 30,20 0,20\" fill=\"#003580\"/><polygon points=\"0,0 30,0 30,20\" fill=\"#009543\"/><polygon points=\"-1,1.5 29,20 31,20 32,18.5 2,0 -2,0\" fill=\"#D21034\" stroke=\"#fff\" stroke-width=\"1.6\"/><circle cx=\"7\" cy=\"6\" r=\"2.4\" fill=\"#FFCE00\"/></svg></span> Namibia"]}, "Np": {"number": 93, "name": "Neptunium", "mass": "(237)", "detail": null}, "Pu": {"number": 94, "name": "Plutonium", "mass": "(244)", "detail": null}, "Am": {"number": 95, "name": "Americium", "mass": "(243)", "detail": null}, "Cm": {"number": 96, "name": "Curium", "mass": "(247)", "detail": null}, "Bk": {"number": 97, "name": "Berkelium", "mass": "(247)", "detail": null}, "Cf": {"number": 98, "name": "Californium", "mass": "(251)", "detail": null}, "Es": {"number": 99, "name": "Einsteinium", "mass": "(252)", "detail": null}, "Fm": {"number": 100, "name": "Fermium", "mass": "(257)", "detail": null}, "Md": {"number": 101, "name": "Mendelevium", "mass": "(258)", "detail": null}, "No": {"number": 102, "name": "Nobelium", "mass": "(259)", "detail": null}, "Lr": {"number": 103, "name": "Lawrencium", "mass": "(262)", "detail": null}};
+
+let currentFrontHTML = '';
+let currentBackHTML = '';
+let currentSide = 'front';
+
+function openCard(symbol){
+  const el = elementData[symbol];
+  if(!el || !el.detail) return;
+  const [abundance, use, state, mp, bp, source, ore, countries] = el.detail;
+  const trivia = triviaData[symbol];
+
+  const factsHtml = trivia ? trivia.facts.map(f => `<li>${f}</li>`).join('') : '<li>More facts coming soon.</li>';
+  const quizHtml = trivia ? `
+      <div class="quiz-box">
+        <div class="quiz-label">Pub quiz question</div>
+        <div class="quiz-q">${trivia.quiz.q}</div>
+        <button class="quiz-reveal-btn" onclick="revealAnswer(this)">Show answer</button>
+        <div class="quiz-answer">${trivia.quiz.a}</div>
+      </div>` : '';
+
+  const flourishes = `
+    <span class="corner-flourish tl">&#10087;</span>
+    <span class="corner-flourish tr">&#10087;</span>
+    <span class="corner-flourish bl">&#10087;</span>
+    <span class="corner-flourish br">&#10087;</span>`;
+
+  currentFrontHTML = `
+    ${flourishes}
+    <button class="modal-close" onclick="closeCard()">&#10005;</button>
+    <button class="flip-btn" onclick="flipCard()">&#8635; Facts &amp; quiz</button>
+    <div class="modal-header">
+      <span class="modal-symbol">${symbol}</span>
+      <span class="modal-name">${el.name}</span>
+    </div>
+    <div class="divider"><span>No. ${el.number} &middot; Mass ${el.mass}</span></div>
+    <div class="modal-grid">
+      <div class="modal-field"><div class="field-label">Natural state</div><div class="field-value">${state}</div></div>
+      <div class="modal-field"><div class="field-label">Abundance</div><div class="field-value">${abundance}</div></div>
+      <div class="modal-field"><div class="field-label">Melting point</div><div class="field-value">${mp}</div></div>
+      <div class="modal-field"><div class="field-label">Boiling point</div><div class="field-value">${bp}</div></div>
+      <div class="modal-field full"><div class="field-label">Everyday use</div><div class="field-value">${use}</div></div>
+      <div class="modal-field full"><div class="field-label">Natural source</div><div class="field-value">${source}</div></div>
+      <div class="modal-field full"><div class="field-label">Ore / mineral</div><div class="field-value">${ore}</div></div>
+      <div class="modal-field full"><div class="field-label">Main source countries</div><div class="field-value">${countries}</div></div>
+    </div>`;
+
+  currentBackHTML = `
+    ${flourishes}
+    <button class="modal-close" onclick="closeCard()">&#10005;</button>
+    <button class="flip-btn" onclick="flipCard()">&#8635; Back to data</button>
+    <div class="modal-header">
+      <span class="modal-symbol">${symbol}</span>
+      <span class="modal-name">${el.name}</span>
+    </div>
+    <div class="divider"><span>Did you know?</span></div>
+    <ul class="facts-list">${factsHtml}</ul>
+    ${quizHtml}`;
+
+  currentSide = 'front';
+  const inner = document.getElementById('flipInner');
+  inner.style.transform = 'rotateY(0deg)';
+  inner.innerHTML = currentFrontHTML;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function flipCard(){
+  const inner = document.getElementById('flipInner');
+  const goingToBack = currentSide === 'front';
+
+  inner.style.transform = 'rotateY(90deg)';
+  setTimeout(() => {
+    inner.innerHTML = goingToBack ? currentBackHTML : currentFrontHTML;
+    currentSide = goingToBack ? 'back' : 'front';
+    inner.style.transition = 'none';
+    inner.style.transform = 'rotateY(-90deg)';
+    inner.offsetHeight; // force reflow
+    inner.style.transition = 'transform 0.3s ease';
+    inner.style.transform = 'rotateY(0deg)';
+  }, 260);
+}
+
+function revealAnswer(btn){
+  const answer = btn.nextElementSibling;
+  answer.classList.add('shown');
+  btn.style.display = 'none';
+}
+
+function closeCard(){
+  document.getElementById('overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closeCard(); closeCountryCard(); closeScientistCard(); } });
+const countryData = {"USA": [["H", 1], ["He", 1], ["Be", 1], ["B", 2], ["Na", 2], ["P", 3], ["S", 2], ["Br", 2], ["I", 3], ["Pb", 3]], "China": [["H", 2], ["Li", 3], ["Be", 2], ["C", 1], ["F", 1], ["Na", 1], ["Mg", 1], ["Al", 2], ["Si", 1], ["P", 1], ["S", 1], ["Ca", 1], ["Ti", 1], ["Mn", 3], ["Fe", 3], ["Cu", 3], ["Zn", 1], ["As", 1], ["Br", 3], ["Sr", 1], ["Ag", 3], ["Cd", 1], ["Sn", 1], ["Ba", 1], ["W", 1], ["Au", 1], ["Hg", 1], ["Pb", 1]], "Russia": [["H", 3], ["C", 2], ["S", 3], ["K", 2], ["Ni", 3], ["As", 3], ["Pt", 2], ["Au", 3]], "Qatar": [["He", 2]], "Algeria": [["He", 3]], "Australia": [["Li", 1], ["Al", 1], ["Ti", 2], ["Mn", 2], ["Fe", 1], ["Zn", 3], ["Au", 2], ["Pb", 2]], "Chile": [["Li", 2], ["Cu", 1], ["I", 1]], "Turkey": [["B", 1]], "Botswana": [["C", 3]], "Mexico": [["F", 2], ["Ag", 1], ["Hg", 2]], "Mongolia": [["F", 3]], "India": [["Na", 3], ["Cr", 3], ["Ba", 2]], "Guinea": [["Al", 3]], "Morocco": [["P", 2], ["As", 2], ["Ba", 3]], "Canada": [["K", 1], ["Rb", 1], ["U", 2]], "Belarus": [["K", 3]], "South Africa": [["Ti", 3], ["Cr", 1], ["Mn", 1], ["Pt", 1]], "Kazakhstan": [["Cr", 2], ["U", 1]], "Brazil": [["Fe", 2]], "Democratic Republic of Congo": [["Co", 1]], "Indonesia": [["Ni", 1], ["Sn", 2]], "Philippines": [["Ni", 2]], "Peru": [["Cu", 2], ["Zn", 2], ["Ag", 2]], "Germany": [["Se", 1]], "Japan": [["Se", 2], ["Cd", 3], ["I", 2]], "Belgium": [["Se", 3]], "Israel": [["Br", 1]], "Spain": [["Sr", 2]], "Argentina": [["Sr", 3]], "South Korea": [["Cd", 2]], "Myanmar": [["Sn", 3]], "Kyrgyzstan": [["Hg", 3]], "Namibia": [["U", 3]]};
+const countryFlags = {"USA": "us", "China": "cn", "Russia": "ru", "Australia": "au", "South Africa": "za", "Chile": "cl", "Mexico": "mx", "India": "in", "Morocco": "ma", "Canada": "ca", "Peru": "pe", "Japan": "jp", "Kazakhstan": "kz", "Indonesia": "id", "Qatar": "qa", "Algeria": "dz", "Turkey": "tr", "Botswana": "bw", "Mongolia": "mn", "Guinea": "gn", "Belarus": "by", "Brazil": "br", "Democratic Republic of Congo": "cd", "Philippines": "ph", "Germany": "de", "Belgium": "be", "Israel": "il", "Spain": "es", "Argentina": "ar", "South Korea": "kr", "Myanmar": "mm", "Kyrgyzstan": "kg", "Namibia": "na"};
+const countryFlagSVGs = {"USA": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#B22234\"/>\n<g fill=\"#fff\">\n<rect y=\"1.54\" width=\"30\" height=\"1.54\"/><rect y=\"4.62\" width=\"30\" height=\"1.54\"/>\n<rect y=\"7.69\" width=\"30\" height=\"1.54\"/><rect y=\"10.77\" width=\"30\" height=\"1.54\"/>\n<rect y=\"13.85\" width=\"30\" height=\"1.54\"/><rect y=\"16.92\" width=\"30\" height=\"1.54\"/>\n</g>\n<rect width=\"12\" height=\"10.77\" fill=\"#3C3B6E\"/>\n</svg>", "China": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#DE2910\"/>\n<g fill=\"#FFDE00\">\n<polygon points=\"5,3 5.8,5.3 8.2,5.3 6.3,6.7 7,9 5,7.6 3,9 3.7,6.7 1.8,5.3 4.2,5.3\"/>\n<circle cx=\"9.5\" cy=\"2\" r=\"0.6\"/><circle cx=\"11\" cy=\"4\" r=\"0.6\"/>\n<circle cx=\"11\" cy=\"6.5\" r=\"0.6\"/><circle cx=\"9.5\" cy=\"8.3\" r=\"0.6\"/>\n</g>\n</svg>", "Russia": "<svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#fff\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#0039A6\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#D52B1E\"/></svg>", "Australia": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#00247D\"/>\n<rect width=\"15\" height=\"10\" fill=\"#00247D\"/>\n<g stroke=\"#fff\" stroke-width=\"1\"><line x1=\"0\" y1=\"0\" x2=\"15\" y2=\"10\"/><line x1=\"15\" y1=\"0\" x2=\"0\" y2=\"10\"/></g>\n<line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#fff\" stroke-width=\"1.6\"/>\n<line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#fff\" stroke-width=\"1.6\"/>\n<line x1=\"7.5\" y1=\"0\" x2=\"7.5\" y2=\"10\" stroke=\"#C8102E\" stroke-width=\"0.8\"/>\n<line x1=\"0\" y1=\"5\" x2=\"15\" y2=\"5\" stroke=\"#C8102E\" stroke-width=\"0.8\"/>\n<g fill=\"#fff\">\n<polygon points=\"22,3 22.4,4.1 23.6,4.1 22.6,4.8 23,6 22,5.3 21,6 21.4,4.8 20.4,4.1 21.6,4.1\"/>\n<polygon points=\"25,9 25.3,9.8 26.1,9.8 25.4,10.3 25.7,11.1 25,10.6 24.3,11.1 24.6,10.3 23.9,9.8 24.7,9.8\"/>\n<polygon points=\"20,13 20.3,13.8 21.1,13.8 20.4,14.3 20.7,15.1 20,14.6 19.3,15.1 19.6,14.3 18.9,13.8 19.7,13.8\"/>\n<polygon points=\"24,15.5 24.25,16.1 24.9,16.1 24.35,16.5 24.55,17.1 24,16.75 23.45,17.1 23.65,16.5 23.1,16.1 23.75,16.1\"/>\n<circle cx=\"17\" cy=\"16\" r=\"0.6\"/>\n</g>\n</svg>", "South Africa": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#fff\"/>\n<polygon points=\"0,0 12,10 0,20\" fill=\"#000\"/>\n<polygon points=\"0,0 15,0 15,3.5 5,10 15,16.5 15,20 0,20 0,16.5 9,10 0,3.5\" fill=\"#007A4D\"/>\n<polygon points=\"0,3.3 0,16.7 9,10\" fill=\"#FFB612\"/>\n<polygon points=\"0,6.6 0,13.4 6,10\" fill=\"#DE3831\"/>\n<rect y=\"8.5\" width=\"30\" height=\"3\" fill=\"#001489\"/>\n<rect y=\"7\" width=\"30\" height=\"1\" fill=\"#fff\"/>\n<rect y=\"12\" width=\"30\" height=\"1\" fill=\"#fff\"/>\n</svg>", "Chile": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"10\" fill=\"#fff\"/>\n<rect y=\"10\" width=\"30\" height=\"10\" fill=\"#D52B1E\"/>\n<rect width=\"10\" height=\"10\" fill=\"#0039A6\"/>\n<polygon points=\"5,3 5.6,4.8 7.5,4.8 6,5.9 6.6,7.7 5,6.6 3.4,7.7 4,5.9 2.5,4.8 4.4,4.8\" fill=\"#fff\"/>\n</svg>", "Mexico": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"10\" height=\"20\" fill=\"#006847\"/>\n<rect x=\"10\" width=\"10\" height=\"20\" fill=\"#fff\"/>\n<rect x=\"20\" width=\"10\" height=\"20\" fill=\"#CE1126\"/>\n<circle cx=\"15\" cy=\"10\" r=\"2.2\" fill=\"#8B5A2B\"/>\n</svg>", "India": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"6.67\" fill=\"#FF9933\"/>\n<rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/>\n<rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#138808\"/>\n<circle cx=\"15\" cy=\"10\" r=\"2\" fill=\"none\" stroke=\"#000080\" stroke-width=\"0.35\"/>\n</svg>", "Morocco": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#C1272D\"/>\n<polygon points=\"15,6.5 16,9.2 19,9.2 16.5,11 17.5,13.7 15,12 12.5,13.7 13.5,11 11,9.2 14,9.2\" fill=\"none\" stroke=\"#006233\" stroke-width=\"0.6\"/>\n</svg>", "Canada": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"7.5\" height=\"20\" fill=\"#FF0000\"/>\n<rect x=\"7.5\" width=\"15\" height=\"20\" fill=\"#fff\"/>\n<rect x=\"22.5\" width=\"7.5\" height=\"20\" fill=\"#FF0000\"/>\n<polygon points=\"15,5 15.9,8 18.5,7 17.3,9.5 19.5,10 17.3,10.5 18.5,13 15.9,12 15,15 14.1,12 11.5,13 12.7,10.5 10.5,10 12.7,9.5 11.5,7 14.1,8\" fill=\"#FF0000\"/>\n</svg>", "Peru": "<svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#fff\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#D91023\"/></svg>", "Japan": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#fff\"/>\n<circle cx=\"15\" cy=\"10\" r=\"5.6\" fill=\"#BC002D\"/>\n</svg>", "Kazakhstan": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#00AFCA\"/>\n<circle cx=\"15\" cy=\"9\" r=\"3.2\" fill=\"#FEC50C\"/>\n<g stroke=\"#FEC50C\" stroke-width=\"0.35\">\n<line x1=\"15\" y1=\"2.5\" x2=\"15\" y2=\"5.3\"/><line x1=\"15\" y1=\"12.7\" x2=\"15\" y2=\"15.5\"/>\n<line x1=\"8.5\" y1=\"9\" x2=\"11.3\" y2=\"9\"/><line x1=\"18.7\" y1=\"9\" x2=\"21.5\" y2=\"9\"/>\n<line x1=\"10.4\" y1=\"4.4\" x2=\"12.3\" y2=\"6.3\"/><line x1=\"17.7\" y1=\"11.7\" x2=\"19.6\" y2=\"13.6\"/>\n<line x1=\"19.6\" y1=\"4.4\" x2=\"17.7\" y2=\"6.3\"/><line x1=\"12.3\" y1=\"11.7\" x2=\"10.4\" y2=\"13.6\"/>\n</g>\n</svg>", "Indonesia": "<svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"10.00\" fill=\"#FF0000\"/><rect y=\"10.00\" width=\"30\" height=\"10.00\" fill=\"#fff\"/></svg>", "Qatar": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#fff\"/>\n<polygon points=\"9,0 30,0 30,20 9,20 12,18.2 9.5,16.4 12,14.5 9.5,12.7 12,10.9 9.5,9.1 12,7.3 9.5,5.5 12,3.6 9.5,1.8\" fill=\"#8D1B3D\"/>\n</svg>", "Algeria": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"15\" height=\"20\" fill=\"#006233\"/>\n<rect x=\"15\" width=\"15\" height=\"20\" fill=\"#fff\"/>\n<circle cx=\"15\" cy=\"10\" r=\"3.6\" fill=\"none\" stroke=\"#D21034\" stroke-width=\"0.8\"/>\n<circle cx=\"16.5\" cy=\"10\" r=\"3.4\" fill=\"#fff\"/>\n<polygon points=\"17.5,7 18.1,8.8 20,8.8 18.5,9.9 19.1,11.7 17.5,10.6 15.9,11.7 16.5,9.9 15,8.8 16.9,8.8\" fill=\"#D21034\"/>\n</svg>", "Turkey": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#E30A17\"/>\n<circle cx=\"12.5\" cy=\"10\" r=\"4.2\" fill=\"#fff\"/>\n<circle cx=\"13.7\" cy=\"10\" r=\"3.4\" fill=\"#E30A17\"/>\n<polygon points=\"18,7.2 18.6,9 20.5,9 19,10.1 19.6,11.9 18,10.8 16.4,11.9 17,10.1 15.5,9 17.4,9\" fill=\"#fff\"/>\n</svg>", "Botswana": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#75AADB\"/>\n<rect y=\"8\" width=\"30\" height=\"4\" fill=\"#fff\"/>\n<rect y=\"9\" width=\"30\" height=\"2\" fill=\"#000\"/>\n</svg>", "Mongolia": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"10\" height=\"20\" fill=\"#C4272F\"/>\n<rect x=\"10\" width=\"10\" height=\"20\" fill=\"#015197\"/>\n<rect x=\"20\" width=\"10\" height=\"20\" fill=\"#C4272F\"/>\n<circle cx=\"5\" cy=\"7\" r=\"1.3\" fill=\"#F9CF02\"/>\n<rect x=\"4.3\" y=\"8.5\" width=\"1.4\" height=\"4\" fill=\"#F9CF02\"/>\n</svg>", "Guinea": "<svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#CE1126\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#FCD116\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#009460\"/></svg>", "Belarus": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"13.3\" fill=\"#D22730\"/>\n<rect y=\"13.3\" width=\"30\" height=\"6.7\" fill=\"#00AF66\"/>\n<rect width=\"3\" height=\"20\" fill=\"#fff\"/>\n<g fill=\"#D22730\">\n<rect x=\"0.4\" y=\"1\" width=\"0.6\" height=\"0.6\"/><rect x=\"1.4\" y=\"1\" width=\"0.6\" height=\"0.6\"/>\n<rect x=\"0.4\" y=\"2\" width=\"0.6\" height=\"0.6\"/><rect x=\"1.4\" y=\"2\" width=\"0.6\" height=\"0.6\"/>\n</g>\n</svg>", "Brazil": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#009739\"/>\n<polygon points=\"15,3 27,10 15,17 3,10\" fill=\"#FEDD00\"/>\n<circle cx=\"15\" cy=\"10\" r=\"4\" fill=\"#012169\"/>\n</svg>", "Democratic Republic of Congo": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#007FFF\"/>\n<polygon points=\"0,20 4,20 30,2 30,0 26,0\" fill=\"#F7D618\"/>\n<polygon points=\"0.7,20 3,20 30,1 27.7,1\" fill=\"#CE1021\"/>\n<polygon points=\"21.5,3 22.1,4.8 24,4.8 22.5,5.9 23.1,7.7 21.5,6.6 19.9,7.7 20.5,5.9 19,4.8 20.9,4.8\" fill=\"#F7D618\"/>\n</svg>", "Philippines": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"10\" fill=\"#0038A8\"/>\n<rect y=\"10\" width=\"30\" height=\"10\" fill=\"#CE1126\"/>\n<polygon points=\"0,0 13,10 0,20\" fill=\"#fff\"/>\n<circle cx=\"4\" cy=\"10\" r=\"1.6\" fill=\"#FCD116\"/>\n</svg>", "Germany": "<svg viewBox=\"0 0 30 20\"><rect y=\"0.00\" width=\"30\" height=\"6.67\" fill=\"#000\"/><rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#DD0000\"/><rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#FFCE00\"/></svg>", "Belgium": "<svg viewBox=\"0 0 30 20\"><rect x=\"0.00\" width=\"10.00\" height=\"20\" fill=\"#000\"/><rect x=\"10.00\" width=\"10.00\" height=\"20\" fill=\"#FDDA24\"/><rect x=\"20.00\" width=\"10.00\" height=\"20\" fill=\"#EF3340\"/></svg>", "Israel": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#fff\"/>\n<rect y=\"2.4\" width=\"30\" height=\"2\" fill=\"#0038B8\"/>\n<rect y=\"15.6\" width=\"30\" height=\"2\" fill=\"#0038B8\"/>\n<polygon points=\"15,7 17,10.5 13,10.5\" fill=\"none\" stroke=\"#0038B8\" stroke-width=\"0.5\"/>\n<polygon points=\"15,13 13,9.5 17,9.5\" fill=\"none\" stroke=\"#0038B8\" stroke-width=\"0.5\"/>\n</svg>", "Spain": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"5\" fill=\"#AA151B\"/>\n<rect y=\"5\" width=\"30\" height=\"10\" fill=\"#F1BF00\"/>\n<rect y=\"15\" width=\"30\" height=\"5\" fill=\"#AA151B\"/>\n</svg>", "Argentina": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"6.67\" fill=\"#74ACDF\"/>\n<rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#fff\"/>\n<rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#74ACDF\"/>\n<circle cx=\"15\" cy=\"10\" r=\"1.8\" fill=\"#F6B40E\"/>\n</svg>", "South Korea": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#fff\"/>\n<circle cx=\"15\" cy=\"10\" r=\"3.5\" fill=\"#CD2E3A\"/>\n<path d=\"M15,6.5 A1.75,1.75 0 0 1 15,10 A1.75,1.75 0 0 0 15,13.5 A3.5,3.5 0 0 0 15,6.5\" fill=\"#0047A0\"/>\n</svg>", "Myanmar": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"6.67\" fill=\"#FECB00\"/>\n<rect y=\"6.67\" width=\"30\" height=\"6.67\" fill=\"#34B233\"/>\n<rect y=\"13.33\" width=\"30\" height=\"6.67\" fill=\"#EA2839\"/>\n<polygon points=\"15,7 15.9,9.7 18.8,9.7 16.5,11.4 17.4,14.1 15,12.4 12.6,14.1 13.5,11.4 11.2,9.7 14.1,9.7\" fill=\"#fff\"/>\n</svg>", "Kyrgyzstan": "<svg viewBox=\"0 0 30 20\">\n<rect width=\"30\" height=\"20\" fill=\"#E8112D\"/>\n<circle cx=\"15\" cy=\"10\" r=\"4\" fill=\"#FFEF00\"/>\n<circle cx=\"15\" cy=\"10\" r=\"1.6\" fill=\"none\" stroke=\"#E8112D\" stroke-width=\"0.4\"/>\n<g stroke=\"#FFEF00\" stroke-width=\"0.3\">\n<line x1=\"15\" y1=\"4.2\" x2=\"15\" y2=\"6.2\"/><line x1=\"15\" y1=\"13.8\" x2=\"15\" y2=\"15.8\"/>\n<line x1=\"9.2\" y1=\"10\" x2=\"11.2\" y2=\"10\"/><line x1=\"18.8\" y1=\"10\" x2=\"20.8\" y2=\"10\"/>\n</g>\n</svg>", "Namibia": "<svg viewBox=\"0 0 30 20\">\n<polygon points=\"0,0 30,20 0,20\" fill=\"#003580\"/>\n<polygon points=\"0,0 30,0 30,20\" fill=\"#009543\"/>\n<polygon points=\"-1,1.5 29,20 31,20 32,18.5 2,0 -2,0\" fill=\"#D21034\" stroke=\"#fff\" stroke-width=\"1.6\"/>\n<circle cx=\"7\" cy=\"6\" r=\"2.4\" fill=\"#FFCE00\"/>\n</svg>"};
+
+function openCountryCard(country){
+  const entries = countryData[country] || [];
+  const flag = countryFlags[country] || '';
+  const medals = {1:'\u{1F947}', 2:'\u{1F948}', 3:'\u{1F949}'};
+  const rankLabel = {1:'1st', 2:'2nd', 3:'3rd'};
+
+  const rows = entries.map(([sym, rank]) => {
+    const el = elementData[sym];
+    const name = el ? el.name : sym;
+    return `<li class="rank-item">
+      <span class="rank-medal">${medals[rank] || ''}</span>
+      <span class="rank-symbol">${sym}</span>
+      <span class="rank-elname">${name}</span>
+      <span class="rank-tag">${rankLabel[rank] || ''} largest producer</span>
+    </li>`;
+  }).join('');
+
+  const modal = document.getElementById('countryModal');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeCountryCard()">&#10005;</button>
+    <div class="country-modal-header">
+      <span class="country-modal-flag-img">${countryFlagSVGs[country] || ''}</span>
+      <span class="country-modal-name">${country}</span>
+    </div>
+    <ul class="rank-list">${rows}</ul>
+  `;
+  document.getElementById('countryOverlay').classList.add('open');
+}
+
+function closeCountryCard(){
+  document.getElementById('countryOverlay').classList.remove('open');
+}
+
+const scientistData = {"Humphry Davy": {"years": "1778–1829", "nationality": "English", "elements": ["Na", "K", "Mg", "Ca", "Ba", "Sr"], "facts": ["Isolated more elements than anyone else in history — six in total, all using electrolysis, a technique barely a few years old at the time.", "Suffered permanent damage to his health and eyesight from years of testing gases on himself, including nitrous oxide, early in his career.", "Also invented the miners' safety lamp, which saved countless lives in coal mines and made him famous well beyond chemistry."]}, "William Ramsay": {"years": "1852–1916", "nationality": "Scottish", "elements": ["Ne", "Ar", "Kr", "Xe"], "facts": ["Discovered four of the six noble gases — neon, argon, krypton and xenon — largely within a single remarkable year, 1898.", "Won the Nobel Prize in Chemistry in 1904 for this work.", "Also helped confirm helium's presence on Earth in 1895, decades after it was first seen only in the Sun's spectrum."]}, "Morris Travers": {"years": "1872–1961", "nationality": "English", "elements": ["Ne", "Kr", "Xe"], "facts": ["Co-discovered neon, krypton and xenon alongside William Ramsay in 1898, working together in a single London laboratory.", "He and Ramsay named neon 'the new one' — literally what 'neon' means in Greek.", "Later helped pioneer the industrial production of liquid oxygen and other gases at scale."]}, "Carl Wilhelm Scheele": {"years": "1742–1786", "nationality": "Swedish-German", "elements": ["O", "Cl", "W"], "facts": ["Identified oxygen, chlorine and tungsten, though he rarely received credit for any of them during his lifetime.", "Prepared oxygen gas up to three years before Joseph Priestley, but published his results later.", "Died at just 43, possibly from repeated exposure to the toxic chemicals he was known to test, sometimes by taste."]}, "Jöns Jacob Berzelius": {"years": "1779–1848", "nationality": "Swedish", "elements": ["Si", "Se"], "facts": ["Discovered silicon and selenium, and separately invented the system of chemical symbols (H, O, Na…) still used today.", "Calculated the atomic weights of nearly every element known in his lifetime with remarkable accuracy, using only 19th-century lab equipment.", "Coined the scientific terms 'catalysis', 'isomer' and 'protein'."]}, "Louis Nicolas Vauquelin": {"years": "1763–1829", "nationality": "French", "elements": ["Be", "Cr"], "facts": ["Discovered both beryllium and chromium within about a year of each other, 1797–1798.", "Started life as a poor farmer's son and lab assistant before becoming one of France's leading chemists.", "Chromium takes its name from the Greek for 'colour', because Vauquelin found its compounds so vividly coloured."]}, "Dmitri Mendeleev": {"years": "1834–1907", "nationality": "Russian", "elements": [], "facts": ["Didn't personally discover a single element — his genius was organising all the known ones into the periodic table in 1869.", "Famously predicted the existence and even the properties of three undiscovered elements purely from gaps he noticed in his table.", "All three (later named gallium, germanium and scandium) were discovered within 15 years, matching his predicted figures astonishingly closely."]}, "Henri Moissan": {"years": "1852–1907", "nationality": "French", "elements": ["F"], "facts": ["Finally isolated fluorine in 1886, after decades of failed attempts by other chemists, some of whom were seriously injured or killed trying.", "Won the Nobel Prize in Chemistry in 1906 for the achievement, shortly before his death.", "Also built an early electric arc furnace, which he used in an unsuccessful attempt to manufacture artificial diamonds."]}, "Hennig Brand": {"years": "c.1630–1710", "nationality": "German", "elements": ["P"], "facts": ["Discovered phosphorus completely by accident in 1669, while trying to turn distilled urine into gold.", "Is the first person in history credited with discovering an element on a known date — everything found before him had no single named discoverer.", "Tried to keep his method secret for profit, until other chemists worked it out independently a few years later."]}, "Henry Cavendish": {"years": "1731–1810", "nationality": "English", "elements": ["H"], "facts": ["Identified hydrogen as a distinct substance in 1766, calling it 'inflammable air'.", "Was extremely wealthy but lived an intensely reclusive life, reportedly avoiding being seen even by his own household staff.", "Also accurately calculated the mass and density of the Earth using a torsion balance experiment."]}, "Joseph Priestley": {"years": "1733–1804", "nationality": "English", "elements": ["O"], "facts": ["Independently discovered oxygen in 1774, a few years after Scheele but published his results first.", "Also discovered nitrous oxide, better known today as laughing gas.", "Was forced to flee England after a mob burned down his house and laboratory over his support for the French Revolution."]}, "Martin Heinrich Klaproth": {"years": "1743–1817", "nationality": "German", "elements": ["U"], "facts": ["Discovered uranium in 1789, naming it after the planet Uranus, which had itself only been discovered eight years earlier.", "Also discovered zirconium and helped confirm several other elements.", "Is considered one of the founders of analytical chemistry as a rigorous scientific discipline."]}, "Bernard Courtois": {"years": "1777–1838", "nationality": "French", "elements": ["I"], "facts": ["Discovered iodine completely by accident in 1811, while processing seaweed ash to make gunpowder for Napoleon's army.", "Noticed a strange violet vapour rising from his mixture after accidentally adding too much sulfuric acid.", "Was too short on money to fully investigate his own discovery, and left much of the follow-up work to other chemists."]}, "Antoine Balard": {"years": "1802–1876", "nationality": "French", "elements": ["Br"], "facts": ["Discovered bromine in 1826, at just 24 years old, while studying salt marsh residues near Montpellier.", "Was narrowly beaten to publishing first by German chemists working on the same substance, but is still credited as the original discoverer.", "Went on to mentor several chemists who became even more famous than him, including Louis Pasteur."]}, "Robert Bunsen &amp; Gustav Kirchhoff": {"years": "1811–1899 / 1824–1887", "nationality": "German", "elements": ["Rb"], "facts": ["Invented the spectroscope together in 1859, then used it to discover rubidium (and caesium) within two years.", "Bunsen gave his name to the Bunsen burner, though he didn't actually invent it — he only improved an existing design.", "Their spectroscope technique is still the basis for how astronomers identify elements in distant stars today."]}, "Albertus Magnus": {"years": "c.1200–1280", "nationality": "German", "elements": ["As"], "facts": ["A medieval friar and philosopher, often credited with isolating arsenic around 1250 — one of the earliest named element discoveries in history.", "Was later canonised as a saint by the Catholic Church, and is now the patron saint of scientists.", "Taught Thomas Aquinas, who became one of the most influential philosophers in Western history."]}, "Antonio de Ulloa": {"years": "1716–1795", "nationality": "Spanish", "elements": ["Pt"], "facts": ["Brought platinum to European scientific attention in the 1740s, after encountering it during an expedition to South America.", "Was primarily a naval officer and explorer, with science as a secondary pursuit.", "Was captured by British forces on his return voyage to Spain, which delayed the publication of his findings by years."]}};
+
+function openScientistCard(name){
+  const s = scientistData[name];
+  if(!s) return;
+
+  const initials = name.replace('&amp;','&').split(/[\s&]+/).filter(w => w && /[A-Za-z]/.test(w[0])).slice(0,2).map(w => w[0].toUpperCase()).join('');
+
+  const chips = s.elements.map(sym => {
+    const el = elementData[sym];
+    const elname = el ? el.name : sym;
+    return `<span class="element-chip"><span class="chip-symbol">${sym}</span> ${elname}</span>`;
+  }).join('');
+
+  const chipRow = s.elements.length ? `<div class="element-chip-row">${chips}</div>` : `<div class="element-chip-row"><span class="element-chip">Creator of the periodic table itself</span></div>`;
+
+  const factsHtml = s.facts.map(f => `<li>${f}</li>`).join('');
+
+  const modal = document.getElementById('scientistModal');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeScientistCard()">&#10005;</button>
+    <div class="scientist-modal-header">
+      <span class="scientist-modal-avatar">${initials}</span>
+      <div>
+        <div class="scientist-modal-name">${name.replace('&amp;','&')}</div>
+        <div class="scientist-modal-sub">${s.nationality} &middot; ${s.years}</div>
+      </div>
+    </div>
+    ${chipRow}
+    <div class="divider"><span>Did you know?</span></div>
+    <ul class="facts-list">${factsHtml}</ul>
+  `;
+  document.getElementById('scientistOverlay').classList.add('open');
+}
+
+function closeScientistCard(){
+  document.getElementById('scientistOverlay').classList.remove('open');
+}
+</script>
+</body>
+</html>
