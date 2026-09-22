@@ -46,10 +46,10 @@
   .legend-item{display:flex; align-items:center; gap:6px;}
   .swatch{width:22px; height:3px; border-radius:2px;}
 
-  .level-label{font-size:13px; fill:var(--text); font-family:inherit;}
-  .step-label{font-size:12.5px; font-weight:700; font-family:inherit;}
-  .step-name{font-size:10.5px; fill:var(--muted); font-family:inherit;}
-  .hf-label{font-size:13px; font-weight:700; fill:var(--hf); font-family:inherit;}
+  .level-label{font-size:16px; fill:var(--text); font-family:inherit;}
+  .step-label{font-size:15px; font-weight:700; font-family:inherit;}
+  .step-name{font-size:12.5px; fill:var(--muted); font-family:inherit;}
+  .hf-label{font-size:16px; font-weight:700; fill:var(--hf); font-family:inherit;}
 
   .reveal-btn{
     font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:8px;
@@ -209,92 +209,106 @@ function render(){
   let cum = 0;
   const cums = [0];
   allSteps.forEach(s => { cum += s.value; cums.push(cum); });
-  const junctionIdx = c.left.length; // index into cums/allSteps-levels where the branches meet
+  const junctionIdx = c.left.length; // index into cums/levels where the branches meet
 
   const order = cums.map((v, i) => i).sort((a, b) => cums[a] - cums[b]);
   const rank = new Array(cums.length);
   order.forEach((idx, r) => { rank[idx] = r; });
   const n = cums.length;
+  const topIdx = order[n - 1], bottomIdx = order[0]; // the single highest and single lowest energy level
 
-  const leftCount = c.left.length, rightCount = c.right.length;
-  const H = Math.max(480, 80 * Math.max(leftCount, rightCount) + 160);
-  const padTop = 30, padBottom = 30;
-  function y(idx){ return H - padBottom - (rank[idx] / (n - 1)) * (H - padTop - padBottom); }
+  // Generous, fixed per-rank spacing -- this alone (not ad-hoc label shuffling) is what keeps
+  // every value cleanly centred on its own arrow with no crowding, even for close-together steps.
+  const rankSpacing = 175;
+  const padTop = 40, padBottom = 40;
+  const H = padTop + padBottom + rankSpacing * (n - 1);
+  function y(idx){ return H - padBottom - rank[idx] * rankSpacing; }
 
-  const leftX = 20, leftLineLen = 260, leftArrowX = leftX + leftLineLen + 30;
-  const juncLineEnd = leftArrowX + 40;
-  const rightX = juncLineEnd + 190, rightLineLen = 220, rightArrowX = rightX + rightLineLen + 30;
-  const hfArrowX = rightArrowX + 190;
-  const W = hfArrowX + 170;
+  // Column layout: left arrows share their column with the Hf arrow (drawn as a 4th,
+  // longer arrow in that same line). The right side gets TWO columns, not one: electron
+  // affinity step(s) in the first, lattice enthalpy in a second, dedicated column of its
+  // own -- lattice is always by far the largest step, so it must never share a column
+  // with anything shorter or it will visually run straight through it.
+  const leftX = 20, leftArrowX = leftX + 280, leftLineLen = (leftArrowX - leftX) + 20;
+  const rightX = leftArrowX + 220, rightArrowX = rightX + 240;
+  // Every right-branch step (electron affinity 1, 2, ... and finally lattice enthalpy) gets
+  // its own column, spaced far enough apart that a full text label ("1st electron affinity
+  // of oxygen" etc.) never reaches into the next column's arrow line.
+  const colSpacing = 230;
+  const maxRightCol = rightArrowX + (c.right.length - 1) * colSpacing;
+  const rightLineLen = (maxRightCol - rightX) + 20;
+  const fullLineEnd = rightX + rightLineLen; // how far the TOP/BOTTOM wide lines stretch
+  const W = maxRightCol + 260;
 
   let svgEl = '';
 
-  // baseline level (index 0) -- left column only
-  { const yy = y(0);
-    svgEl += `<line x1="${leftX}" y1="${yy}" x2="${leftX+leftLineLen}" y2="${yy}" stroke="#222" stroke-width="1.5"/>`;
-    svgEl += `<text class="level-label" x="${leftX}" y="${yy-8}">${c.baseline}</text>`; }
-
-  // left branch levels (indices 1..junctionIdx), drawn in the left column;
-  // the junction level (last one) is drawn as a WIDE line spanning into the right column too,
-  // since it's the shared meeting point of both branches.
-  c.left.forEach((step, i) => {
-    const idx = i + 1;
+  function drawLevel(label, idx, colX, colLen){
     const yy = y(idx);
+    const wide = (idx === topIdx || idx === bottomIdx);
     const isJunction = (idx === junctionIdx);
-    const x2 = isJunction ? juncLineEnd : (leftX + leftLineLen);
-    svgEl += `<line x1="${leftX}" y1="${yy}" x2="${x2}" y2="${yy}" stroke="#222" stroke-width="1.5"/>`;
-    svgEl += `<text class="level-label" x="${leftX}" y="${yy-8}">${step.label}</text>`;
-  });
+    let x1 = colX, x2 = colX + colLen;
+    if(wide){
+      x1 = leftX; x2 = fullLineEnd;
+    } else if(isJunction){
+      // The junction is where left and right branches meet -- its line must reach across
+      // to touch the first right-branch arrow (EA1), or that arrow looks like it starts
+      // from nowhere. But stop right there: don't reach all the way to EA2's column too.
+      x1 = leftX; x2 = rightArrowX + 20;
+    }
+    svgEl += `<line x1="${x1}" y1="${yy}" x2="${x2}" y2="${yy}" stroke="#222" stroke-width="1.5"/>`;
+    svgEl += `<text class="level-label" x="${colX}" y="${yy-10}">${label}</text>`;
+  }
 
-  // left branch arrows (ascending column)
+  // baseline (index 0), left column -- wide only if it happens to be the overall top or bottom
+  drawLevel(c.baseline, 0, leftX, leftLineLen);
+
+  // left branch levels (indices 1..junctionIdx)
+  c.left.forEach((step, i) => drawLevel(step.label, i + 1, leftX, leftLineLen));
+
+  // left branch arrows (ascending column) -- label always at a fixed offset, vertically centred
   for(let i = 0; i < c.left.length; i++){
-    const fromIdx = i, toIdx = i + 1;
-    const y1 = y(fromIdx), y2 = y(toIdx);
+    const y1 = y(i), y2 = y(i + 1);
     const step = c.left[i];
     const color = step.value > 0 ? 'var(--endo)' : 'var(--exo)';
     const mId = 'lm' + i;
     svgEl += `<defs>${arrowMarker(mId, color)}</defs>`;
     svgEl += `<line x1="${leftArrowX}" y1="${y1}" x2="${leftArrowX}" y2="${y2}" stroke="${color}" stroke-width="2.5" marker-end="url(#${mId})"/>`;
-    const midY = (y1+y2)/2;
+    const midY = (y1 + y2) / 2;
     const labelText = step.hidden ? '?' : (step.value > 0 ? '+' : '') + step.value;
-    const rankSpan = Math.abs(rank[toIdx] - rank[fromIdx]);
-    const xOff = rankSpan >= 2 ? 130 : 10;
-    svgEl += `<text class="step-label" x="${leftArrowX+xOff}" y="${midY-4}" fill="${color}">${labelText}</text>`;
-    svgEl += `<text class="step-name" x="${leftArrowX+xOff}" y="${midY+11}">${step.name}</text>`;
+    svgEl += `<text class="step-label" x="${leftArrowX+16}" y="${midY-6}" fill="${color}">${labelText}</text>`;
+    svgEl += `<text class="step-name" x="${leftArrowX+16}" y="${midY+15}">${step.name}</text>`;
   }
 
-  // right branch levels (indices junctionIdx+1 .. end), drawn in the right column
-  c.right.forEach((step, i) => {
-    const idx = junctionIdx + 1 + i;
-    const yy = y(idx);
-    svgEl += `<line x1="${rightX}" y1="${yy}" x2="${rightX+rightLineLen}" y2="${yy}" stroke="#222" stroke-width="1.5"/>`;
-    svgEl += `<text class="level-label" x="${rightX}" y="${yy-8}">${step.label}</text>`;
-  });
+  // direct route: Hf arrow, drawn in the SAME column as the left arrows (baseline down to solid)
+  const yTop = y(0);
+  const yBottom = y(n - 1);
+  svgEl += `<defs>${arrowMarker('hfArrow', 'var(--hf)')}</defs>`;
+  svgEl += `<line x1="${leftArrowX}" y1="${yTop}" x2="${leftArrowX}" y2="${yBottom}" stroke="var(--hf)" stroke-width="3.5" marker-end="url(#hfArrow)"/>`;
+  const hfMidY = (yTop + yBottom) / 2;
+  svgEl += `<text class="hf-label" x="${leftArrowX+16}" y="${hfMidY - 6}">&#916;H\u2091 = ${c.dHf}</text>`;
+  svgEl += `<text class="step-name" x="${leftArrowX+16}" y="${hfMidY + 15}">Direct route (enthalpy of formation)</text>`;
 
-  // right branch arrows (descending column)
+  // right branch levels (indices junctionIdx+1 .. end)
+  c.right.forEach((step, i) => drawLevel(step.label, junctionIdx + 1 + i, rightX, rightLineLen));
+
+  // right branch arrows: electron affinity step(s) in one column, lattice enthalpy (always
+  // the last step) in its own separate column so it never overlaps the shorter EA arrows.
   for(let i = 0; i < c.right.length; i++){
     const fromIdx = junctionIdx + i, toIdx = junctionIdx + i + 1;
     const y1 = y(fromIdx), y2 = y(toIdx);
     const step = c.right[i];
+    // Every step gets its own column (0, 1, 2...) spaced widely enough apart that long
+    // text labels never collide with a neighbouring column's arrow line.
+    const colX = rightArrowX + i * colSpacing;
     const color = step.isLattice ? 'var(--latt)' : (step.value > 0 ? 'var(--endo)' : 'var(--exo)');
     const mId = 'rm' + i;
     svgEl += `<defs>${arrowMarker(mId, color)}</defs>`;
-    svgEl += `<line x1="${rightArrowX}" y1="${y1}" x2="${rightArrowX}" y2="${y2}" stroke="${color}" stroke-width="2.5" marker-end="url(#${mId})"/>`;
-    const midY = (y1+y2)/2;
+    svgEl += `<line x1="${colX}" y1="${y1}" x2="${colX}" y2="${y2}" stroke="${color}" stroke-width="2.5" marker-end="url(#${mId})"/>`;
+    const midY = (y1 + y2) / 2;
     const labelText = step.hidden ? '?' : (step.value > 0 ? '+' : '') + step.value;
-    const rankSpan = Math.abs(rank[toIdx] - rank[fromIdx]);
-    const xOff = rankSpan >= 2 ? 130 : 10;
-    svgEl += `<text class="step-label" x="${rightArrowX+xOff}" y="${midY-4}" fill="${color}">${labelText}</text>`;
-    svgEl += `<text class="step-name" x="${rightArrowX+xOff}" y="${midY+11}">${step.name}</text>`;
+    svgEl += `<text class="step-label" x="${colX+16}" y="${midY-6}" fill="${color}">${labelText}</text>`;
+    svgEl += `<text class="step-name" x="${colX+16}" y="${midY+15}">${step.name}</text>`;
   }
-
-  // direct route: Hf arrow, baseline (index 0) straight down to the solid (last index)
-  const yTop = y(0);
-  const yBottom = y(n - 1);
-  svgEl += `<defs>${arrowMarker('hfArrow', 'var(--hf)')}</defs>`;
-  svgEl += `<line x1="${hfArrowX}" y1="${yTop}" x2="${hfArrowX}" y2="${yBottom}" stroke="var(--hf)" stroke-width="3.5" marker-end="url(#hfArrow)"/>`;
-  svgEl += `<text class="hf-label" x="${hfArrowX+10}" y="${(yTop+yBottom)/2 - 4}">&#916;H\u2091</text>`;
-  svgEl += `<text class="step-name" x="${hfArrowX+10}" y="${(yTop+yBottom)/2 + 11}">${c.dHf} kJ/mol (direct route)</text>`;
 
   document.getElementById('cycleChart').setAttribute('viewBox', `0 0 ${W} ${H}`);
   document.getElementById('cycleChart').innerHTML = svgEl;
