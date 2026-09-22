@@ -161,10 +161,82 @@
   }
   .preview-frame-wrap{flex:1; position:relative; background:#525659;}
   .preview-frame-wrap iframe{width:100%; height:100%; border:none;}
+
+  .preview-modal-wide{max-width:1400px;}
+  .preview-dual{flex:1; display:flex; gap:2px; min-height:0; background:var(--border);}
+  .preview-pane{flex:1; display:flex; flex-direction:column; min-width:0; background:#fff;}
+  .preview-pane-label{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--muted); padding:8px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .preview-pane .preview-frame-wrap{flex:1;}
+  .preview-pane-empty{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    color:#888; font-size:13px; background:#f4f4f4; text-align:center; padding:20px;
+  }
+  @media (max-width:760px){
+    .preview-dual{flex-direction:column;}
+  }
   .preview-note{
     font-size:11.5px; color:var(--muted); text-align:center;
     padding:8px 14px; border-top:1px solid var(--border); flex-shrink:0;
   }
+
+  /* Quick-check Q&A modal */
+  .qa-overlay{
+    position:fixed; inset:0; background:rgba(20,20,18,0.7);
+    display:none; align-items:center; justify-content:center;
+    padding:16px; z-index:100;
+  }
+  .qa-overlay.open{display:flex;}
+  .qa-modal{
+    background:#fff; border-radius:12px; width:100%; max-width:700px; max-height:88vh;
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+  .qa-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .qa-title{font-size:15px; font-weight:700;}
+  .qa-sub{font-size:12px; color:var(--muted); margin-top:2px; font-weight:400;}
+  .qa-close{
+    border:1px solid var(--border); background:#fff; border-radius:50%;
+    width:30px; height:30px; cursor:pointer; font-size:15px; line-height:1; flex-shrink:0;
+  }
+  .qa-body{flex:1; overflow-y:auto; padding:18px 20px;}
+  .qa-item{
+    border-bottom:1px solid var(--border);
+    padding:16px 0;
+  }
+  .qa-item:first-child{padding-top:0;}
+  .qa-item:last-child{border-bottom:none;}
+  .qa-qnum{font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:4px;}
+  .qa-question{font-size:14.5px; line-height:1.55; margin-bottom:10px;}
+  .qa-reveal-btn{
+    font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:7px;
+    border:1px solid var(--accent); color:var(--accent); background:var(--accent-bg);
+    cursor:pointer;
+  }
+  .level-panel[data-level="ah"] .qa-reveal-btn{border-color:var(--ah-accent); color:var(--ah-accent); background:var(--ah-accent-bg);}
+  .qa-answer{
+    margin-top:10px; padding:10px 13px; border-radius:8px;
+    background:var(--bg); border:1px solid var(--border);
+    font-size:14px; line-height:1.55; display:none;
+  }
+  .qa-answer.shown{display:block;}
+  .qa-empty{text-align:center; color:var(--muted); font-size:14px; padding:30px 0;}
+
+  .topic-practice-btn{
+    font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:7px;
+    border:1px solid var(--border);
+    background:none; font-family:inherit; cursor:pointer;
+    width:100%;
+  }
+  .level-panel[data-level="gcse"] .topic-practice-btn.active{color:var(--accent); border-color:var(--accent); background:var(--accent-bg);}
+  .level-panel[data-level="ah"] .topic-practice-btn.active{color:var(--ah-accent); border-color:var(--ah-accent); background:var(--ah-accent-bg);}
+  .topic-practice-btn.placeholder{color:var(--muted); border-style:dashed; opacity:.6; cursor:default;}
 
   footer{
     margin-top:36px; padding-top:20px; border-top:1px solid var(--border);
@@ -177,7 +249,7 @@
   <span class="badge">Free for students and teachers</span>
   <h1>Past Paper Revision</h1>
   <p class="sub">Past papers, mark schemes, and topic-based question packs for GCSE/National&nbsp;5 and A-level/Advanced Higher Chemistry.</p>
-  <p class="free-note">Papers are grouped by exam board. Each entry links to the question paper and mark scheme separately &mdash; a dashed grey link means that file hasn't been added yet.</p>
+  <p class="free-note">Papers are grouped by exam board. Each entry opens the question paper and mark scheme together, side by side &mdash; a greyed-out button means that file hasn't been added yet.</p>
 
   <div class="level-tabs">
     <button class="level-tab active" data-level="gcse" onclick="switchLevel('gcse')">GCSE / National 5</button>
@@ -206,15 +278,35 @@
 </div>
 
 <div class="preview-overlay" id="previewOverlay" onclick="if(event.target===this) closePreview()">
-  <div class="preview-modal">
+  <div class="preview-modal preview-modal-wide">
     <div class="preview-header">
       <span class="preview-title" id="previewTitle"></span>
       <button class="preview-close" onclick="closePreview()">&#10005;</button>
     </div>
-    <div class="preview-frame-wrap">
-      <iframe id="previewFrame" src=""></iframe>
+    <div class="preview-dual">
+      <div class="preview-pane">
+        <div class="preview-pane-label">Question paper</div>
+        <div class="preview-frame-wrap" id="qpFrameWrap"><iframe id="qpFrame" src=""></iframe></div>
+      </div>
+      <div class="preview-pane">
+        <div class="preview-pane-label">Mark scheme</div>
+        <div class="preview-frame-wrap" id="msFrameWrap"><iframe id="msFrame" src=""></iframe></div>
+      </div>
     </div>
     <div class="preview-note">Preview only &mdash; practice as many times as you like. Right-click and print/save options are disabled in this viewer where possible.</div>
+  </div>
+</div>
+
+<div class="qa-overlay" id="qaOverlay" onclick="if(event.target===this) closeQA()">
+  <div class="qa-modal">
+    <div class="qa-header">
+      <div>
+        <div class="qa-title" id="qaTitle"></div>
+        <div class="qa-sub" id="qaSub"></div>
+      </div>
+      <button class="qa-close" onclick="closeQA()">&#10005;</button>
+    </div>
+    <div class="qa-body" id="qaBody"></div>
   </div>
 </div>
 
@@ -238,37 +330,41 @@ const DATA = {
         { series: "June 2023", detail: "Paper 2 \u00b7 Higher", qp: "#", ms: "#" }
       ],
       topics: [
-        { name: "Atomic structure & the periodic table", qp: "#", ms: "#" },
-        { name: "Bonding, structure & properties of matter", qp: "#", ms: "#" },
-        { name: "Quantitative chemistry", qp: "#", ms: "#" },
-        { name: "Chemical changes", qp: "#", ms: "#" },
-        { name: "Energy changes", qp: "#", ms: "#" },
-        { name: "Rate & extent of chemical change", qp: "#", ms: "#" },
-        { name: "Organic chemistry", qp: "#", ms: "#" },
-        { name: "Chemical analysis", qp: "#", ms: "#" },
-        { name: "Chemistry of the atmosphere", qp: "#", ms: "#" },
-        { name: "Using resources", qp: "#", ms: "#" }
+        { name: "Atomic structure & the periodic table", questions: [
+          { q: "Define the term 'isotope'.", a: "Atoms of the same element (same number of protons) that have a different number of neutrons, giving them different mass numbers." },
+          { q: "Give the electronic configuration of a chlorine atom (atomic number 17).", a: "2, 8, 7" },
+          { q: "Explain why elements in the same group of the periodic table have similar chemical properties.", a: "They have the same number of electrons in their outer shell, and it's the outer shell electrons that determine how an element reacts." }
+        ]},
+        { name: "Bonding, structure & properties of matter", questions: [] },
+        { name: "Quantitative chemistry", questions: [] },
+        { name: "Chemical changes", questions: [] },
+        { name: "Energy changes", questions: [] },
+        { name: "Rate & extent of chemical change", questions: [] },
+        { name: "Organic chemistry", questions: [] },
+        { name: "Chemical analysis", questions: [] },
+        { name: "Chemistry of the atmosphere", questions: [] },
+        { name: "Using resources", questions: [] }
       ]
     },
     {
       board: "SQA National 5 Chemistry",
       papers: [
-        { series: "2024", detail: "Paper 1 (multiple choice)", qp: "#", ms: "#" },
-        { series: "2024", detail: "Paper 2", qp: "#", ms: "#" },
-        { series: "2023", detail: "Paper 1 (multiple choice)", qp: "#", ms: "#" },
-        { series: "2023", detail: "Paper 2", qp: "#", ms: "#" },
-        { series: "2022", detail: "Paper 1 (multiple choice)", qp: "#", ms: "#" },
-        { series: "2022", detail: "Paper 2", qp: "#", ms: "#" }
+        { series: "2024", detail: "Section 1 \u00b7 multiple choice", qp: "#", ms: "#" },
+        { series: "2024", detail: "Section 2 \u00b7 extended response", qp: "#", ms: "#" },
+        { series: "2023", detail: "Section 1 \u00b7 multiple choice", qp: "#", ms: "#" },
+        { series: "2023", detail: "Section 2 \u00b7 extended response", qp: "#", ms: "#" },
+        { series: "2022", detail: "Section 1 \u00b7 multiple choice", qp: "#", ms: "#" },
+        { series: "2022", detail: "Section 2 \u00b7 extended response", qp: "#", ms: "#" }
       ],
       topics: [
-        { name: "Rates of reaction", qp: "#", ms: "#" },
-        { name: "Atomic structure & bonding", qp: "#", ms: "#" },
-        { name: "Acids, bases & metals", qp: "#", ms: "#" },
-        { name: "Fuels & hydrocarbons", qp: "#", ms: "#" },
-        { name: "Esters, fats & oils", qp: "#", ms: "#" },
-        { name: "Plastics & polymers", qp: "#", ms: "#" },
-        { name: "Fertilisers & nuclear chemistry", qp: "#", ms: "#" },
-        { name: "Chemical calculations", qp: "#", ms: "#" }
+        { name: "Rates of reaction", questions: [] },
+        { name: "Atomic structure & bonding", questions: [] },
+        { name: "Acids, bases & metals", questions: [] },
+        { name: "Fuels & hydrocarbons", questions: [] },
+        { name: "Esters, fats & oils", questions: [] },
+        { name: "Plastics & polymers", questions: [] },
+        { name: "Fertilisers & nuclear chemistry", questions: [] },
+        { name: "Chemical calculations", questions: [] }
       ]
     }
   ],
@@ -285,15 +381,15 @@ const DATA = {
         { series: "June 2023", detail: "Paper 3 \u00b7 Synoptic & practical skills", qp: "#", ms: "#" }
       ],
       topics: [
-        { name: "Atomic structure & bonding", qp: "#", ms: "#" },
-        { name: "Periodicity", qp: "#", ms: "#" },
-        { name: "Energetics / Thermodynamics", qp: "#", ms: "#" },
-        { name: "Kinetics", qp: "#", ms: "#" },
-        { name: "Equilibria", qp: "#", ms: "#" },
-        { name: "Redox & electrochemistry", qp: "#", ms: "#" },
-        { name: "Inorganic chemistry", qp: "#", ms: "#" },
-        { name: "Organic chemistry", qp: "#", ms: "#" },
-        { name: "Analytical techniques", qp: "#", ms: "#" }
+        { name: "Atomic structure & bonding", questions: [] },
+        { name: "Periodicity", questions: [] },
+        { name: "Energetics / Thermodynamics", questions: [] },
+        { name: "Kinetics", questions: [] },
+        { name: "Equilibria", questions: [] },
+        { name: "Redox & electrochemistry", questions: [] },
+        { name: "Inorganic chemistry", questions: [] },
+        { name: "Organic chemistry", questions: [] },
+        { name: "Analytical techniques", questions: [] }
       ]
     },
     {
@@ -307,15 +403,15 @@ const DATA = {
         { series: "June 2023", detail: "Paper 3 \u00b7 General & Practical Principles", qp: "#", ms: "#" }
       ],
       topics: [
-        { name: "Atomic structure & bonding", qp: "#", ms: "#" },
-        { name: "Periodicity", qp: "#", ms: "#" },
-        { name: "Energetics / Thermodynamics", qp: "#", ms: "#" },
-        { name: "Kinetics", qp: "#", ms: "#" },
-        { name: "Equilibria", qp: "#", ms: "#" },
-        { name: "Redox & electrochemistry", qp: "#", ms: "#" },
-        { name: "Inorganic chemistry", qp: "#", ms: "#" },
-        { name: "Organic chemistry", qp: "#", ms: "#" },
-        { name: "Analytical techniques", qp: "#", ms: "#" }
+        { name: "Atomic structure & bonding", questions: [] },
+        { name: "Periodicity", questions: [] },
+        { name: "Energetics / Thermodynamics", questions: [] },
+        { name: "Kinetics", questions: [] },
+        { name: "Equilibria", questions: [] },
+        { name: "Redox & electrochemistry", questions: [] },
+        { name: "Inorganic chemistry", questions: [] },
+        { name: "Organic chemistry", questions: [] },
+        { name: "Analytical techniques", questions: [] }
       ]
     },
     {
@@ -323,49 +419,91 @@ const DATA = {
       papers: [
         { series: "2024", detail: "Higher \u00b7 Paper 1 (multiple choice)", qp: "#", ms: "#" },
         { series: "2024", detail: "Higher \u00b7 Paper 2", qp: "#", ms: "#" },
-        { series: "2024", detail: "Advanced Higher", qp: "#", ms: "#" },
+        { series: "2024", detail: "Advanced Higher \u00b7 Section 1", qp: "#", ms: "#" },
+        { series: "2024", detail: "Advanced Higher \u00b7 Section 2", qp: "#", ms: "#" },
         { series: "2023", detail: "Higher \u00b7 Paper 1 (multiple choice)", qp: "#", ms: "#" },
         { series: "2023", detail: "Higher \u00b7 Paper 2", qp: "#", ms: "#" },
-        { series: "2023", detail: "Advanced Higher", qp: "#", ms: "#" }
+        { series: "2023", detail: "Advanced Higher \u00b7 Section 1", qp: "#", ms: "#" },
+        { series: "2023", detail: "Advanced Higher \u00b7 Section 2", qp: "#", ms: "#" }
       ],
       topics: [
-        { name: "Atomic structure & bonding", qp: "#", ms: "#" },
-        { name: "Periodicity & structure", qp: "#", ms: "#" },
-        { name: "Energetics & kinetics", qp: "#", ms: "#" },
-        { name: "Equilibria & acids/bases", qp: "#", ms: "#" },
-        { name: "Redox & electrochemistry", qp: "#", ms: "#" },
-        { name: "Organic chemistry & stereochemistry", qp: "#", ms: "#" },
-        { name: "Researching chemistry (AH)", qp: "#", ms: "#" }
+        { name: "Atomic structure & bonding", questions: [] },
+        { name: "Periodicity & structure", questions: [] },
+        { name: "Energetics & kinetics", questions: [] },
+        { name: "Equilibria & acids/bases", questions: [] },
+        { name: "Redox & electrochemistry", questions: [] },
+        { name: "Organic chemistry & stereochemistry", questions: [] },
+        { name: "Researching chemistry (AH)", questions: [] }
       ]
     }
   ]
 
 };
 
-function linkHtml(label, url, title){
-  const isPlaceholder = url === '#';
-  if (isPlaceholder) {
-    return `<span class="paper-link placeholder">${label} \u2014 coming soon</span>`;
+// Renders one pane of the dual preview: a real PDF if we have one, or a plain
+// "not uploaded yet" message in its place -- so one missing file doesn't block viewing
+// the other.
+function fillPane(frameId, wrapId, url){
+  const wrap = document.getElementById(wrapId);
+  if(url === '#'){
+    wrap.innerHTML = `<div class="preview-pane-empty">Not uploaded yet</div>`;
+  } else {
+    wrap.innerHTML = `<iframe id="${frameId}" src="${url}#toolbar=0&navpanes=0"></iframe>`;
   }
-  const safeUrl = url.replace(/'/g, "\\'");
-  const safeTitle = (title || label).replace(/'/g, "\\'");
-  return `<button class="paper-link active" onclick="openPreview('${safeUrl}', '${safeTitle}')">${label}</button>`;
 }
 
-function openPreview(url, title){
+function openCombinedPreview(qpUrl, msUrl, title){
   document.getElementById('previewTitle').textContent = title;
-  // Hide the PDF viewer's own toolbar/download button where the browser supports it.
-  // (Chrome/Edge honour these params; this discourages casual downloading but can't fully prevent it.)
-  document.getElementById('previewFrame').src = url + '#toolbar=0&navpanes=0';
+  fillPane('qpFrame', 'qpFrameWrap', qpUrl);
+  fillPane('msFrame', 'msFrameWrap', msUrl);
   document.getElementById('previewOverlay').classList.add('open');
 }
 
 function closePreview(){
   document.getElementById('previewOverlay').classList.remove('open');
-  document.getElementById('previewFrame').src = '';
+  document.getElementById('qpFrameWrap').innerHTML = '<iframe id="qpFrame" src=""></iframe>';
+  document.getElementById('msFrameWrap').innerHTML = '<iframe id="msFrame" src=""></iframe>';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+function paperButtonHtml(p, boardName){
+  const bothMissing = (p.qp === '#' && p.ms === '#');
+  const label = `${p.series} \u2014 ${p.detail}`;
+  if(bothMissing){
+    return `<span class="paper-link placeholder">View paper &amp; mark scheme \u2014 coming soon</span>`;
+  }
+  const safeQp = p.qp.replace(/'/g, "\\'");
+  const safeMs = p.ms.replace(/'/g, "\\'");
+  const safeTitle = (boardName + ' \u2014 ' + label).replace(/'/g, "\\'");
+  return `<button class="paper-link active" onclick="openCombinedPreview('${safeQp}', '${safeMs}', '${safeTitle}')">View paper &amp; mark scheme &#8594;</button>`;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closePreview(); closeQA(); } });
+
+// ---- Topic-based question packs: quick-check Q&A, answer revealed inline ----
+
+function openQA(boardName, topicName, questions){
+  document.getElementById('qaTitle').textContent = topicName;
+  document.getElementById('qaSub').textContent = boardName;
+  const body = document.getElementById('qaBody');
+
+  if(!questions || questions.length === 0){
+    body.innerHTML = `<div class="qa-empty">Questions for this topic haven't been added yet &mdash; check back soon.</div>`;
+  } else {
+    body.innerHTML = questions.map((item, i) => `
+      <div class="qa-item">
+        <div class="qa-qnum">Question ${i + 1}</div>
+        <div class="qa-question">${item.q}</div>
+        <button class="qa-reveal-btn" onclick="this.nextElementSibling.classList.add('shown'); this.style.display='none';">Show answer</button>
+        <div class="qa-answer">${item.a}</div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('qaOverlay').classList.add('open');
+}
+
+function closeQA(){
+  document.getElementById('qaOverlay').classList.remove('open');
+}
 
 function renderBoards(level){
   const container = document.getElementById('boards-' + level);
@@ -406,8 +544,7 @@ function renderBoards(level){
         <div class="paper-title">${p.series}</div>
         <div class="paper-sub">${p.detail}</div>
         <div class="link-row">
-          ${linkHtml('Question paper', p.qp, b.board + ' \u2014 ' + p.series + ' ' + p.detail + ' (Question paper)')}
-          ${linkHtml('Mark scheme', p.ms, b.board + ' \u2014 ' + p.series + ' ' + p.detail + ' (Mark scheme)')}
+          ${paperButtonHtml(p, b.board)}
         </div>
       `;
       papersGrid.appendChild(card);
@@ -425,14 +562,21 @@ function renderBoards(level){
       const card = document.createElement('div');
       card.className = 'paper-card';
       card.dataset.searchText = t.name.toLowerCase();
+      const hasQuestions = t.questions && t.questions.length > 0;
+      const count = hasQuestions ? t.questions.length : 0;
       card.innerHTML = `
         <div class="paper-title">${t.name}</div>
-        <div class="paper-sub">Compiled past-paper questions</div>
-        <div class="link-row">
-          ${linkHtml('Questions', t.qp, b.board + ' \u2014 ' + t.name + ' (Questions)')}
-          ${linkHtml('Mark scheme', t.ms, b.board + ' \u2014 ' + t.name + ' (Mark scheme)')}
-        </div>
+        <div class="paper-sub">${hasQuestions ? count + ' question' + (count !== 1 ? 's' : '') + ', question and answer together' : 'Compiled past-paper questions'}</div>
+        <div class="link-row"></div>
       `;
+      const linkRow = card.querySelector('.link-row');
+      const btn = document.createElement(hasQuestions ? 'button' : 'span');
+      btn.className = hasQuestions ? 'paper-link active' : 'paper-link placeholder';
+      btn.textContent = hasQuestions ? 'Practice these questions \u2192' : 'Practice questions \u2014 coming soon';
+      if(hasQuestions){
+        btn.addEventListener('click', () => openQA(b.board, t.name, t.questions));
+      }
+      linkRow.appendChild(btn);
       topicsGrid.appendChild(card);
     });
     body.appendChild(topicsGrid);
