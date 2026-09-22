@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Materials — Chemistry</title>
+<style>
+  :root{
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --border: #ddd9cf;
+    --text: #2b2a27;
+    --muted: #6f6d64;
+    --accent: #639922;
+    --accent-bg: #EAF3DE;
+    --ah-accent: #3b6fa0;
+    --ah-accent-bg: #E3EDF6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  .badge{
+    display:inline-block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+    background:var(--accent-bg);
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:10px;
+  }
+  h1{font-size:26px;font-weight:600;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 8px;line-height:1.6;}
+  .free-note{
+    font-size:13px;
+    color:var(--muted);
+    margin:0 0 24px;
+    padding:10px 14px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:8px;
+  }
+
+  .level-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:22px;
+    border-bottom:1px solid var(--border);
+  }
+  .level-tab{
+    font:inherit;
+    font-size:15px;
+    font-weight:600;
+    color:var(--muted);
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    padding:10px 4px 12px;
+    cursor:pointer;
+    margin-right:20px;
+  }
+  .level-tab:hover{color:var(--text);}
+  .level-tab.active[data-level="gcse"]{color:var(--accent); border-bottom-color:var(--accent);}
+  .level-tab.active[data-level="ah"]{color:var(--ah-accent); border-bottom-color:var(--ah-accent);}
+
+  .level-panel{display:none;}
+  .level-panel.active{display:block;}
+
+  .search-bar{display:flex; gap:10px; margin-bottom:28px;}
+  .search-bar input{
+    flex:1; border:1px solid var(--border); border-radius:8px;
+    padding:10px 14px; font-size:15px; background:#fff;
+  }
+  .search-bar input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .level-panel[data-level="ah"] .search-bar input:focus{outline-color:var(--ah-accent);}
+
+  .topic-section{
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--card);
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .topic-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; cursor:pointer; user-select:none;
+  }
+  .topic-header:hover{background:var(--bg);}
+  .topic-title-row{display:flex; align-items:baseline; gap:8px;}
+  .topic-number{font-size:13px; font-weight:600;}
+  .level-panel[data-level="gcse"] .topic-number{color:var(--accent);}
+  .level-panel[data-level="ah"] .topic-number{color:var(--ah-accent);}
+  .topic-title{font-size:17px; font-weight:600; margin:0;}
+  .topic-count{font-size:13px; color:var(--muted); font-weight:400;}
+  .chevron{font-size:18px; color:var(--muted); transition:transform .2s; flex-shrink:0;}
+  .topic-section.open .chevron{transform:rotate(90deg);}
+  .topic-body{display:none; padding:0 20px 18px;}
+  .topic-section.open .topic-body{display:block;}
+
+  .slide-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:12px;
+  }
+  .slide-card{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    text-decoration:none;
+    color:var(--text);
+    background:#fff;
+    transition:border-color .15s, transform .1s;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .level-panel[data-level="gcse"] .slide-card:hover{border-color:var(--accent);}
+  .level-panel[data-level="ah"] .slide-card:hover{border-color:var(--ah-accent);}
+  .slide-card:active{transform:scale(0.98);}
+  .slide-name{font-size:14px; font-weight:600;}
+  .slide-desc{font-size:12px; color:var(--muted); line-height:1.4;}
+  .slide-tag{
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; font-weight:600; margin-top:4px;
+  }
+  .level-panel[data-level="gcse"] .slide-tag{color:var(--accent);}
+  .level-panel[data-level="ah"] .slide-tag{color:var(--ah-accent);}
+  .slide-card.placeholder{opacity:0.5; pointer-events:none; border-style:dashed;}
+  .format-chip{
+    font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--muted); background:var(--bg); border:1px solid var(--border);
+    border-radius:5px; padding:1px 6px; display:inline-block; width:fit-content;
+  }
+
+  .empty-state{text-align:center; color:var(--muted); font-size:14px; padding:40px 0; display:none;}
+
+  footer{
+    margin-top:36px; padding-top:20px; border-top:1px solid var(--border);
+    font-size:12px; color:var(--muted); text-align:center; line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">Free for students and teachers</span>
+  <h1>Course Materials</h1>
+  <p class="sub">Teaching slides I use in my own lessons, shared here so you can review topics at your own pace &mdash; covering GCSE/National&nbsp;5 and A-level/Advanced Higher Chemistry.</p>
+  <p class="free-note">Slides open in your browser or download as PowerPoint/PDF, depending on the file. A dashed card means that topic's slides haven't been uploaded yet.</p>
+
+  <div class="level-tabs">
+    <button class="level-tab active" data-level="gcse" onclick="switchLevel('gcse')">GCSE / National 5</button>
+    <button class="level-tab" data-level="ah" onclick="switchLevel('ah')">A-level / Advanced Higher</button>
+  </div>
+
+  <div class="level-panel active" data-level="gcse">
+    <div class="search-bar">
+      <input type="text" id="searchInput-gcse" placeholder="Search topics, e.g. bonding, the mole, organic" oninput="filterVideos('gcse')">
+    </div>
+    <div id="topics-gcse"></div>
+    <p class="empty-state" id="emptyState-gcse">No slides match your search.</p>
+  </div>
+
+  <div class="level-panel" data-level="ah">
+    <div class="search-bar">
+      <input type="text" id="searchInput-ah" placeholder="Search topics, e.g. kinetics, equilibria, orbitals" oninput="filterVideos('ah')">
+    </div>
+    <div id="topics-ah"></div>
+    <p class="empty-state" id="emptyState-ah">No slides match your search.</p>
+  </div>
+
+  <footer>
+    Built and used in my own teaching. Free to use for personal study &mdash; please don't re-upload or redistribute elsewhere.
+  </footer>
+</div>
+
+<script>
+// To add a slide deck: copy a { name, desc, url, format } line inside the matching
+// topic's slides array below and fill in your own title, description, file link and format.
+// Leave url as "#" and the card will show as a greyed-out placeholder ("coming soon").
+// format is just a small label, e.g. "PPTX" or "PDF".
+
+const DATA = {
+
+  gcse: [
+    {
+      topic: "Atomic structure and the periodic table",
+      slides: [
+        { name: "Discovery of the electron", desc: "Slides to accompany the video", url: "#", format: "PPTX" },
+        { name: "Structure of the atom", desc: "Protons, neutrons and electrons", url: "#", format: "PPTX" },
+        { name: "The periodic table", desc: "Groups, periods and atomic number", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Bonding, structure and the properties of matter",
+      slides: [
+        { name: "Ionic bonding", desc: "Electron transfer between metals and non-metals", url: "#", format: "PPTX" },
+        { name: "Covalent bonding", desc: "Sharing electrons between non-metal atoms", url: "#", format: "PPTX" },
+        { name: "Metallic bonding", desc: "Delocalised electrons and the electron sea model", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Quantitative chemistry",
+      slides: [
+        { name: "The mole", desc: "Avogadro's number and molar mass", url: "#", format: "PPTX" },
+        { name: "Concentration calculations", desc: "Working in mol/dm3", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Chemical changes",
+      slides: [
+        { name: "Reactivity series", desc: "Ranking metals by how readily they react", url: "#", format: "PPTX" },
+        { name: "Acids and bases", desc: "pH scale and neutralisation", url: "#", format: "PPTX" },
+        { name: "Electrolysis", desc: "Splitting compounds using electricity", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Energy changes",
+      slides: [
+        { name: "Exothermic and endothermic reactions", desc: "Energy transfer in reactions", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "The rate and extent of chemical change",
+      slides: [
+        { name: "Collision theory", desc: "Why reaction rate changes with conditions", url: "#", format: "PPTX" },
+        { name: "Reversible reactions and equilibrium", desc: "Le Chatelier's principle", url: "#", format: "PPTX" },
+        { name: "The Haber process", desc: "Slides to accompany the animation", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Organic chemistry",
+      slides: [
+        { name: "Crude oil and hydrocarbons", desc: "Fractional distillation", url: "#", format: "PPTX" },
+        { name: "Alkanes and cracking", desc: "Structure and breaking down long chains", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Chemical analysis",
+      slides: [
+        { name: "Chromatography", desc: "Separating and interpreting mixtures", url: "#", format: "PPTX" },
+        { name: "Testing for gases", desc: "Identifying common gases", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Chemistry of the atmosphere",
+      slides: [
+        { name: "Evolution of the atmosphere", desc: "How Earth's atmosphere changed over time", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Using resources",
+      slides: [
+        { name: "Life cycle assessment", desc: "Environmental impact of products", url: "#", format: "PPTX" }
+      ]
+    }
+  ],
+
+  ah: [
+    {
+      topic: "Atomic structure and bonding",
+      slides: [
+        { name: "Filling the orbitals", desc: "Aufbau, Hund's rule, Pauli exclusion, and transition metal ions", url: "#", format: "PPTX" },
+        { name: "Shapes of molecules", desc: "VSEPR theory", url: "#", format: "PPTX" },
+        { name: "Intermolecular forces", desc: "Van der Waals, dipole-dipole, hydrogen bonding", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Periodicity",
+      slides: [
+        { name: "Trends across period 3", desc: "Atomic radius, ionisation energy, melting point", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Energetics / Thermodynamics",
+      slides: [
+        { name: "Enthalpy cycles", desc: "Hess's law and Born-Haber cycles", url: "#", format: "PPTX" },
+        { name: "Entropy and Gibbs free energy", desc: "Predicting reaction feasibility", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Kinetics",
+      slides: [
+        { name: "Rate equations and orders of reaction", desc: "Determining rate laws", url: "#", format: "PPTX" },
+        { name: "The Arrhenius equation", desc: "Temperature and rate constants", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Equilibria",
+      slides: [
+        { name: "Kc and Kp", desc: "Equilibrium constants", url: "#", format: "PPTX" },
+        { name: "Acid-base equilibria", desc: "Ka, pH, and buffers", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Redox and electrochemistry",
+      slides: [
+        { name: "Electrode potentials", desc: "Standard cells and the electrochemical series", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Inorganic chemistry",
+      slides: [
+        { name: "Transition metal complexes", desc: "Ligands, coordination number and colour", url: "#", format: "PPTX" },
+        { name: "Variable oxidation states", desc: "Why transition metals form more than one ion", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Organic chemistry",
+      slides: [
+        { name: "Reaction mechanisms", desc: "Substitution, addition and elimination", url: "#", format: "PPTX" },
+        { name: "Stereoisomerism", desc: "Optical and E/Z isomerism", url: "#", format: "PPTX" }
+      ]
+    },
+    {
+      topic: "Analytical techniques",
+      slides: [
+        { name: "Mass spectrometry", desc: "Interpreting fragmentation patterns", url: "#", format: "PPTX" },
+        { name: "NMR spectroscopy", desc: "Reading proton and carbon-13 spectra", url: "#", format: "PPTX" }
+      ]
+    }
+  ]
+
+};
+
+function renderTopics(level){
+  const container = document.getElementById('topics-' + level);
+  container.innerHTML = '';
+  DATA[level].forEach((t, i) => {
+    const topicEl = document.createElement('div');
+    topicEl.className = 'topic-section';
+
+    const header = document.createElement('div');
+    header.className = 'topic-header';
+    header.onclick = () => topicEl.classList.toggle('open');
+    header.innerHTML = `
+      <div class="topic-title-row">
+        <span class="topic-number">${i + 1}.</span>
+        <h2 class="topic-title">${t.topic}</h2>
+        <span class="topic-count">${t.slides.length} deck${t.slides.length !== 1 ? 's' : ''}</span>
+      </div>
+      <span class="chevron">&#8250;</span>
+    `;
+    topicEl.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'topic-body';
+
+    const grid = document.createElement('div');
+    grid.className = 'slide-grid';
+
+    t.slides.forEach(slide => {
+      const isPlaceholder = slide.url === '#';
+      const card = document.createElement('a');
+      card.className = 'slide-card' + (isPlaceholder ? ' placeholder' : '');
+      card.href = slide.url;
+      card.dataset.searchText = (slide.name + ' ' + slide.desc + ' ' + t.topic).toLowerCase();
+      card.innerHTML = `
+        <span class="format-chip">${slide.format}</span>
+        <span class="slide-name">${slide.name}</span>
+        <span class="slide-desc">${slide.desc}</span>
+        <span class="slide-tag">${isPlaceholder ? 'Coming soon' : 'View / download &#8594;'}</span>
+      `;
+      grid.appendChild(card);
+    });
+
+    body.appendChild(grid);
+    topicEl.appendChild(body);
+    container.appendChild(topicEl);
+  });
+
+  const first = container.querySelector('.topic-section');
+  if (first) first.classList.add('open');
+}
+
+function filterVideos(level){
+  const query = document.getElementById('searchInput-' + level).value.trim().toLowerCase();
+  const container = document.getElementById('topics-' + level);
+  const topics = container.querySelectorAll('.topic-section');
+  let anyVisible = false;
+
+  topics.forEach(topicEl => {
+    const cards = topicEl.querySelectorAll('.slide-card');
+    let topicHasMatch = false;
+
+    cards.forEach(card => {
+      const matches = !query || card.dataset.searchText.includes(query);
+      card.style.display = matches ? '' : 'none';
+      if(matches) topicHasMatch = true;
+    });
+
+    topicEl.style.display = topicHasMatch ? '' : 'none';
+    if(topicHasMatch){
+      anyVisible = true;
+      if(query) topicEl.classList.add('open');
+    }
+  });
+
+  document.getElementById('emptyState-' + level).style.display = anyVisible ? 'none' : 'block';
+}
+
+function switchLevel(level){
+  document.querySelectorAll('.level-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.level === level));
+  document.querySelectorAll('.level-panel').forEach(panel => panel.classList.toggle('active', panel.dataset.level === level));
+}
+
+renderTopics('gcse');
+renderTopics('ah');
+</script>
+</body>
+</html>

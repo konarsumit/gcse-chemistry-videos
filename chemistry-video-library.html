@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemistry Video Library — GCSE/National 5 and A-level/Advanced Higher</title>
+<style>
+  :root{
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --border: #ddd9cf;
+    --text: #2b2a27;
+    --muted: #6f6d64;
+    --accent: #639922;
+    --accent-bg: #EAF3DE;
+    --ah-accent: #3b6fa0;
+    --ah-accent-bg: #E3EDF6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  .badge{
+    display:inline-block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+    background:var(--accent-bg);
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:10px;
+  }
+  h1{font-size:26px;font-weight:600;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 8px;line-height:1.6;}
+  .free-note{
+    font-size:13px;
+    color:var(--muted);
+    margin:0 0 24px;
+    padding:10px 14px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:8px;
+  }
+
+  .level-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:22px;
+    border-bottom:1px solid var(--border);
+  }
+  .level-tab{
+    font:inherit;
+    font-size:15px;
+    font-weight:600;
+    color:var(--muted);
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    padding:10px 4px 12px;
+    cursor:pointer;
+    margin-right:20px;
+  }
+  .level-tab:hover{color:var(--text);}
+  .level-tab.active[data-level="gcse"]{color:var(--accent); border-bottom-color:var(--accent);}
+  .level-tab.active[data-level="ah"]{color:var(--ah-accent); border-bottom-color:var(--ah-accent);}
+
+  .search-bar{
+    display:flex;
+    gap:10px;
+    margin-bottom:28px;
+  }
+  .search-bar input{
+    flex:1;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:15px;
+    background:#fff;
+  }
+  .search-bar input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .level-panel[data-level="ah"] .search-bar input:focus{outline-color:var(--ah-accent);}
+
+  .topic-section{
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--card);
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .topic-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .topic-header:hover{background:var(--bg);}
+  .topic-title-row{display:flex;align-items:baseline;gap:8px;}
+  .topic-number{
+    font-size:13px;
+    font-weight:600;
+  }
+  .level-panel[data-level="gcse"] .topic-number{color:var(--accent);}
+  .level-panel[data-level="ah"] .topic-number{color:var(--ah-accent);}
+  .topic-title{font-size:17px;font-weight:600;margin:0;}
+  .topic-count{font-size:13px;color:var(--muted);font-weight:400;}
+  .chevron{
+    font-size:18px;
+    color:var(--muted);
+    transition:transform .2s;
+    flex-shrink:0;
+  }
+  .topic-section.open .chevron{transform:rotate(90deg);}
+
+  .topic-body{
+    display:none;
+    padding:0 20px 18px;
+  }
+  .topic-section.open .topic-body{display:block;}
+
+  .video-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:12px;
+  }
+  .video-card{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    text-decoration:none;
+    color:var(--text);
+    background:#fff;
+    transition:border-color .15s, transform .1s;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .level-panel[data-level="gcse"] .video-card:hover{border-color:var(--accent);}
+  .level-panel[data-level="ah"] .video-card:hover{border-color:var(--ah-accent);}
+  .video-card:active{transform:scale(0.98);}
+  .video-name{font-size:14px;font-weight:600;}
+  .video-desc{font-size:12px;color:var(--muted);line-height:1.4;}
+  .video-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:11px;
+    font-weight:600;
+    margin-top:4px;
+  }
+  .level-panel[data-level="gcse"] .video-tag{color:var(--accent);}
+  .level-panel[data-level="ah"] .video-tag{color:var(--ah-accent);}
+  .video-card.placeholder{
+    opacity:0.5;
+    pointer-events:none;
+    border-style:dashed;
+  }
+
+  .empty-state{
+    text-align:center;
+    color:var(--muted);
+    font-size:14px;
+    padding:40px 0;
+    display:none;
+  }
+
+  .level-panel{display:none;}
+  .level-panel.active{display:block;}
+
+  footer{
+    margin-top:36px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    font-size:12px;
+    color:var(--muted);
+    text-align:center;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">Free for students and teachers</span>
+  <h1>Chemistry Video Library</h1>
+  <p class="sub">Original animated explainers, built from scratch for this site &mdash; covering both GCSE/National&nbsp;5 and A-level/Advanced Higher Chemistry.</p>
+  <p class="free-note">Every animation here is hand-built and unique to this site &mdash; not sourced from textbooks, YouTube, or stock diagrams. Free to watch for any student revising Chemistry.</p>
+
+  <div class="level-tabs">
+    <button class="level-tab active" data-level="gcse" onclick="switchLevel('gcse')">GCSE / National 5</button>
+    <button class="level-tab" data-level="ah" onclick="switchLevel('ah')">A-level / Advanced Higher</button>
+  </div>
+
+  <div class="level-panel active" data-level="gcse">
+    <div class="search-bar">
+      <input type="text" id="searchInput-gcse" placeholder="Search topics or videos, e.g. electron, mole, rate of reaction" oninput="filterVideos('gcse')">
+    </div>
+    <div id="topics-gcse"></div>
+    <p class="empty-state" id="emptyState-gcse">No videos match your search.</p>
+  </div>
+
+  <div class="level-panel" data-level="ah">
+    <div class="search-bar">
+      <input type="text" id="searchInput-ah" placeholder="Search topics or videos, e.g. orbitals, equilibrium, enthalpy" oninput="filterVideos('ah')">
+    </div>
+    <div id="topics-ah"></div>
+    <p class="empty-state" id="emptyState-ah">No videos match your search.</p>
+  </div>
+
+  <footer>
+    Built and animated in-house. Free to use for personal study &mdash; please don't re-upload or redistribute elsewhere.
+  </footer>
+</div>
+
+<script>
+// To add a video: copy a { name, desc, url } line inside the matching topic's
+// videos array below (under the right level) and fill in your own title, description, and page link.
+// Leave url as "#" and the card will show as a greyed-out placeholder ("coming soon").
+
+const DATA = {
+
+  gcse: [
+    {
+      topic: "Atomic structure and the periodic table",
+      videos: [
+        { name: "Discovery of the electron", desc: "Thomson's cathode ray tube experiment", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/electron-discovery.html" },
+        { name: "The plum pudding model", desc: "The atomic model before the nucleus was found", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/plum-pudding-model.html" },
+        { name: "Interactive periodic table", desc: "Click any element for its properties, discovery story, and a pub quiz question", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/periodic-table-interactive.html" },
+        { name: "Rutherford's gold foil experiment", desc: "How the nucleus was discovered", url: "#" },
+        { name: "Structure of the atom", desc: "Protons, neutrons and electrons explained", url: "#" },
+        { name: "Isotopes", desc: "Atoms of the same element with different masses", url: "#" },
+        { name: "How the periodic table is arranged", desc: "Groups, periods and atomic number", url: "#" }
+      ]
+    },
+    {
+      topic: "Bonding, structure and the properties of matter",
+      videos: [
+        { name: "Ionic bonding", desc: "Electron transfer between metals and non-metals", url: "#" },
+        { name: "Covalent bonding", desc: "Sharing electrons between non-metal atoms", url: "#" },
+        { name: "Metallic bonding", desc: "Delocalised electrons and the electron sea model", url: "#" },
+        { name: "Giant covalent structures", desc: "Diamond, graphite and silicon dioxide", url: "#" },
+        { name: "States of matter", desc: "Particle arrangement in solids, liquids and gases", url: "#" }
+      ]
+    },
+    {
+      topic: "Quantitative chemistry",
+      videos: [
+        { name: "Conservation of mass", desc: "Why mass is unchanged in a chemical reaction", url: "#" },
+        { name: "Relative formula mass", desc: "Calculating mass from a chemical formula", url: "#" },
+        { name: "The mole", desc: "Introducing Avogadro's number and molar mass", url: "#" },
+        { name: "Concentration of solutions", desc: "Calculating concentration in mol/dm3", url: "#" }
+      ]
+    },
+    {
+      topic: "Chemical changes",
+      videos: [
+        { name: "Reactivity series", desc: "Ranking metals by how readily they react", url: "#" },
+        { name: "Acids and bases", desc: "pH scale and neutralisation reactions", url: "#" },
+        { name: "Electrolysis", desc: "Splitting compounds using electricity", url: "#" }
+      ]
+    },
+    {
+      topic: "Energy changes",
+      videos: [
+        { name: "Exothermic and endothermic reactions", desc: "Energy transfer in chemical reactions", url: "#" },
+        { name: "Reaction profiles", desc: "Activation energy and energy level diagrams", url: "#" }
+      ]
+    },
+    {
+      topic: "The rate and extent of chemical change",
+      videos: [
+        { name: "Collision theory", desc: "Why reaction rate changes with conditions", url: "#" },
+        { name: "Factors affecting rate of reaction", desc: "Temperature, concentration, surface area and catalysts", url: "#" },
+        { name: "Reversible reactions and equilibrium", desc: "Le Chatelier's principle explained visually", url: "#" },
+        { name: "The Haber process", desc: "Making ammonia — and the industrial compromise between yield and rate", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/haber-process.html" }
+      ]
+    },
+    {
+      topic: "Organic chemistry",
+      videos: [
+        { name: "Crude oil and hydrocarbons", desc: "Fractional distillation explained", url: "#" },
+        { name: "Alkanes", desc: "Structure and properties of alkanes", url: "#" },
+        { name: "Cracking hydrocarbons", desc: "Breaking long chains into useful products", url: "#" }
+      ]
+    },
+    {
+      topic: "Chemical analysis",
+      videos: [
+        { name: "Pure substances and mixtures", desc: "What purity means in chemistry", url: "#" },
+        { name: "Chromatography", desc: "Separating mixtures and interpreting results", url: "#" },
+        { name: "Testing for gases", desc: "Identifying oxygen, hydrogen, CO2 and chlorine", url: "#" }
+      ]
+    },
+    {
+      topic: "Chemistry of the atmosphere",
+      videos: [
+        { name: "Evolution of the atmosphere", desc: "How Earth's early atmosphere changed over time", url: "#" },
+        { name: "Greenhouse gases and climate change", desc: "The carbon cycle and human impact", url: "#" }
+      ]
+    },
+    {
+      topic: "Using resources",
+      videos: [
+        { name: "Life cycle assessment", desc: "Evaluating the environmental impact of products", url: "#" },
+        { name: "Recycling and sustainable resources", desc: "Why reuse and recycling matter", url: "#" }
+      ]
+    }
+  ],
+
+  ah: [
+    {
+      topic: "Atomic structure and bonding",
+      videos: [
+        { name: "Filling the orbitals", desc: "Aufbau, Hund's rule and Pauli exclusion — plus the chromium/copper exceptions and transition metal ions", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/orbitals.html" },
+        { name: "Shapes of molecules", desc: "VSEPR theory and electron pair repulsion", url: "#" },
+        { name: "Intermolecular forces", desc: "Van der Waals, dipole-dipole and hydrogen bonding", url: "#" }
+      ]
+    },
+    {
+      topic: "Periodicity",
+      videos: [
+        { name: "Trends across period 3", desc: "Atomic radius, ionisation energy and melting point", url: "#" },
+        { name: "Ionisation energy patterns", desc: "Why successive ionisation energies jump at shell boundaries", url: "#" }
+      ]
+    },
+    {
+      topic: "Energetics / Thermodynamics",
+      videos: [
+        { name: "Enthalpy cycles", desc: "Hess's law and Born-Haber cycles", url: "#" },
+        { name: "Entropy and Gibbs free energy", desc: "Predicting whether a reaction is feasible", url: "#" }
+      ]
+    },
+    {
+      topic: "Kinetics",
+      videos: [
+        { name: "Rate equations and orders of reaction", desc: "Determining rate laws from experimental data", url: "#" },
+        { name: "The Arrhenius equation", desc: "How temperature affects rate constants", url: "#" }
+      ]
+    },
+    {
+      topic: "Equilibria",
+      videos: [
+        { name: "Kc and Kp", desc: "Equilibrium constants for homogeneous and heterogeneous systems", url: "#" },
+        { name: "Acid-base equilibria", desc: "Ka, pH calculations and buffer solutions", url: "#" }
+      ]
+    },
+    {
+      topic: "Redox and electrochemistry",
+      videos: [
+        { name: "Electrode potentials", desc: "Standard cells and the electrochemical series", url: "#" },
+        { name: "Balancing redox equations", desc: "Half-equations and oxidation states", url: "#" }
+      ]
+    },
+    {
+      topic: "Inorganic chemistry",
+      videos: [
+        { name: "Transition metal complexes", desc: "Ligands, coordination number and colour", url: "#" },
+        { name: "Variable oxidation states", desc: "Why transition metals form more than one stable ion", url: "#" }
+      ]
+    },
+    {
+      topic: "Organic chemistry",
+      videos: [
+        { name: "Reaction mechanisms", desc: "Nucleophilic substitution, addition and elimination", url: "#" },
+        { name: "Stereoisomerism", desc: "Optical and E/Z isomerism", url: "#" }
+      ]
+    },
+    {
+      topic: "Analytical techniques",
+      videos: [
+        { name: "Mass spectrometry", desc: "Interpreting fragmentation patterns", url: "#" },
+        { name: "NMR spectroscopy", desc: "Reading proton and carbon-13 spectra", url: "#" }
+      ]
+    }
+  ]
+
+};
+
+function renderTopics(level){
+  const container = document.getElementById('topics-' + level);
+  container.innerHTML = '';
+  DATA[level].forEach((t, i) => {
+    const topicEl = document.createElement('div');
+    topicEl.className = 'topic-section';
+    topicEl.dataset.topicIndex = i;
+
+    const header = document.createElement('div');
+    header.className = 'topic-header';
+    header.onclick = () => topicEl.classList.toggle('open');
+    header.innerHTML = `
+      <div class="topic-title-row">
+        <span class="topic-number">${i + 1}.</span>
+        <h2 class="topic-title">${t.topic}</h2>
+        <span class="topic-count">${t.videos.length} video${t.videos.length !== 1 ? 's' : ''}</span>
+      </div>
+      <span class="chevron">&#8250;</span>
+    `;
+    topicEl.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'topic-body';
+
+    const grid = document.createElement('div');
+    grid.className = 'video-grid';
+
+    t.videos.forEach(video => {
+      const isPlaceholder = video.url === '#';
+      const card = document.createElement('a');
+      card.className = 'video-card' + (isPlaceholder ? ' placeholder' : '');
+      card.href = video.url;
+      card.dataset.searchText = (video.name + ' ' + video.desc + ' ' + t.topic).toLowerCase();
+      card.innerHTML = `
+        <span class="video-name">${video.name}</span>
+        <span class="video-desc">${video.desc}</span>
+        <span class="video-tag">${isPlaceholder ? 'Coming soon' : 'Watch &#8594;'}</span>
+      `;
+      grid.appendChild(card);
+    });
+
+    body.appendChild(grid);
+    topicEl.appendChild(body);
+    container.appendChild(topicEl);
+  });
+
+  if(container.querySelector('.topic-section')){
+    container.querySelector('.topic-section').classList.add('open');
+  }
+}
+
+function filterVideos(level){
+  const query = document.getElementById('searchInput-' + level).value.trim().toLowerCase();
+  const container = document.getElementById('topics-' + level);
+  const topics = container.querySelectorAll('.topic-section');
+  let anyVisible = false;
+
+  topics.forEach(topicEl => {
+    const cards = topicEl.querySelectorAll('.video-card');
+    let topicHasMatch = false;
+
+    cards.forEach(card => {
+      const matches = !query || card.dataset.searchText.includes(query);
+      card.style.display = matches ? '' : 'none';
+      if(matches) topicHasMatch = true;
+    });
+
+    topicEl.style.display = topicHasMatch ? '' : 'none';
+    if(topicHasMatch){
+      anyVisible = true;
+      if(query) topicEl.classList.add('open');
+    }
+  });
+
+  document.getElementById('emptyState-' + level).style.display = anyVisible ? 'none' : 'block';
+}
+
+function switchLevel(level){
+  document.querySelectorAll('.level-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+  document.querySelectorAll('.level-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.level === level);
+  });
+}
+
+renderTopics('gcse');
+renderTopics('ah');
+</script>
+</body>
+</html>
