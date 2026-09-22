@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ionisation Energies: H to Argon</title>
+<style>
+  :root{
+    --text: #111111;
+    --muted: #555555;
+    --p1: #64748b;
+    --p2: #2563eb;
+    --p3: #16a34a;
+    --border: #ddd9cf;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#fafafa;
+    color:var(--text);
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  h1{font-size:23px;font-weight:600;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 22px;line-height:1.6;max-width:70ch;}
+
+  .card{
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+    padding:20px; margin-bottom:20px;
+  }
+  h2{font-size:16px; font-weight:700; margin:0 0 4px;}
+  .card-sub{font-size:13px; color:var(--muted); margin:0 0 16px;}
+
+  .legend-row{display:flex; flex-wrap:wrap; gap:16px; margin-bottom:14px; font-size:12.5px; color:var(--muted);}
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .swatch{width:12px; height:12px; border-radius:3px;}
+
+  .bar{cursor:pointer; transition:opacity .15s;}
+  .bar:hover{opacity:0.8;}
+  .bar.selected{stroke:#111; stroke-width:2;}
+  .el-label{font-size:12px; font-weight:600; text-anchor:middle; fill:var(--text);}
+  .el-value{font-size:9.5px; text-anchor:middle; fill:var(--muted);}
+  .axis-label{font-size:10.5px; fill:var(--muted);}
+  .dip-mark{font-size:13px; text-anchor:middle; fill:#c0392b; font-weight:700;}
+
+  .anomaly-box{
+    margin-top:6px; padding:12px 14px; background:#faf7f0; border:1px solid #ecdfc4;
+    border-radius:10px; font-size:12.5px; line-height:1.6; color:#5a4a1f;
+  }
+  .anomaly-box b{color:#3d3115;}
+
+  .instruction{font-size:13px; color:var(--muted); margin-bottom:4px;}
+
+  .ladder-panel{min-height:340px;}
+  .ladder-empty{
+    display:flex; align-items:center; justify-content:center; height:300px;
+    color:var(--muted); font-size:14px; text-align:center; padding:0 20px;
+  }
+  .ladder-header{display:flex; align-items:baseline; gap:10px; margin-bottom:4px;}
+  .ladder-symbol{font-family:Georgia, serif; font-size:26px; font-weight:700;}
+  .ladder-name{font-size:14px; color:var(--muted);}
+
+  .jump-bracket{stroke:#c0392b; stroke-width:1.5; fill:none;}
+  .jump-label{font-size:11px; fill:#c0392b; font-weight:600;}
+  .ie-bar{fill:#2563eb;}
+  .ie-bar.jump-start{fill:#16a34a;}
+  .ie-num{font-size:10px; text-anchor:middle; fill:#fff; font-weight:700;}
+  .ie-tick{font-size:10.5px; text-anchor:middle; fill:var(--muted);}
+
+  .jump-explain{
+    margin-top:10px; padding:12px 14px; background:#eef6ec; border:1px solid #cfe6c6;
+    border-radius:10px; font-size:13px; line-height:1.6; color:#1e4620;
+  }
+  .jump-explain b{color:#123016;}
+
+  .watermark-box{fill:#111111;}
+  .watermark-text{font-size:11px; fill:#ffffff; font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ionisation Energies: Hydrogen to Argon</h1>
+  <p class="sub">Click any element below to see its full ionisation energy "ladder" &mdash; and exactly where the big jumps happen between IE1, IE2, and beyond.</p>
+
+  <div class="card">
+    <h2>First ionisation energy across the period</h2>
+    <p class="card-sub">The energy needed to remove one electron from a neutral gaseous atom. Click a bar to explore that element further below.</p>
+    <div class="legend-row">
+      <div class="legend-item"><span class="swatch" style="background:var(--p1)"></span> Period 1</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--p2)"></span> Period 2</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--p3)"></span> Period 3</div>
+    </div>
+    <svg id="mainChart" width="100%" viewBox="0 0 960 380"></svg>
+    <div class="anomaly-box">
+      <b>Four anomalies worth knowing:</b> Be&rarr;B and Mg&rarr;Al dip because the outgoing electron now sits in a higher-energy p-subshell rather than a full s-subshell. N&rarr;O and P&rarr;S dip because the 4th p-electron must pair up in an already-occupied orbital, and that extra repulsion makes it easier to remove.
+    </div>
+  </div>
+
+  <div class="card ladder-panel">
+    <h2>Successive ionisation energies (log scale)</h2>
+    <p class="instruction" id="ladderInstruction">Click an element above to see its full ionisation ladder here.</p>
+    <div id="ladderContent"></div>
+  </div>
+</div>
+
+<script>
+const svgNS = "http://www.w3.org/2000/svg";
+
+const elements = [
+  [1,"H","Hydrogen",[1312,null,null,null,null,null,null,null]],
+  [2,"He","Helium",[2372,5251,null,null,null,null,null,null]],
+  [3,"Li","Lithium",[520,7298,11815,null,null,null,null,null]],
+  [4,"Be","Beryllium",[899,1757,14849,21007,null,null,null,null]],
+  [5,"B","Boron",[801,2427,3660,25026,32827,null,null,null]],
+  [6,"C","Carbon",[1087,2353,4621,6223,37831,47277,null,null]],
+  [7,"N","Nitrogen",[1402,2856,4578,7475,9445,53267,64360,null]],
+  [8,"O","Oxygen",[1314,3388,5301,7469,10990,13327,71330,84078]],
+  [9,"F","Fluorine",[1681,3374,6050,8408,11023,15164,17868,92038]],
+  [10,"Ne","Neon",[2081,3952,6122,9371,12177,15238,19999,23070]],
+  [11,"Na","Sodium",[496,4562,6910,9543,13354,16613,20117,25496]],
+  [12,"Mg","Magnesium",[738,1451,7733,10543,13630,18020,21711,25661]],
+  [13,"Al","Aluminium",[578,1817,2745,11577,14842,18379,23326,27465]],
+  [14,"Si","Silicon",[787,1577,3232,4356,16091,19805,23780,29287]],
+  [15,"P","Phosphorus",[1012,1907,2914,4964,6274,21267,25431,29872]],
+  [16,"S","Sulfur",[1000,2252,3357,4556,7004,8496,27107,31719]],
+  [17,"Cl","Chlorine",[1251,2298,3822,5159,6542,9362,11018,33604]],
+  [18,"Ar","Argon",[1521,2666,3931,5771,7238,8781,11995,13842]]
+];
+
+function periodOf(z){ return z <= 2 ? 1 : (z <= 10 ? 2 : 3); }
+function periodColor(z){ const p = periodOf(z); return p===1?'var(--p1)':(p===2?'var(--p2)':'var(--p3)'); }
+
+// ---- Main chart: IE1 across all elements ----
+function buildMainChart(){
+  const svg = document.getElementById('mainChart');
+  const W = 960, H = 380, chartTop = 20, chartBottom = 310, chartLeft = 46, chartRight = 940;
+  const maxVal = 2500;
+  const barW = (chartRight - chartLeft) / elements.length;
+
+  function y(val){ return chartBottom - (val / maxVal) * (chartBottom - chartTop); }
+
+  let svgContent = '';
+
+  // gridlines + y labels
+  for(let v = 0; v <= maxVal; v += 500){
+    const yy = y(v);
+    svgContent += `<line x1="${chartLeft}" y1="${yy}" x2="${chartRight}" y2="${yy}" stroke="#eee" stroke-width="1"/>`;
+    svgContent += `<text class="axis-label" x="${chartLeft-8}" y="${yy+4}" text-anchor="end">${v}</text>`;
+  }
+  svgContent += `<text class="axis-label" x="14" y="18" transform="rotate(0)">kJ/mol</text>`;
+
+  elements.forEach((el, i) => {
+    const [z, sym, name, ies] = el;
+    const x = chartLeft + i * barW + barW * 0.12;
+    const w = barW * 0.76;
+    const val = ies[0];
+    const yy = y(val);
+    const color = periodColor(z);
+    svgContent += `<rect class="bar" id="bar-${sym}" x="${x}" y="${yy}" width="${w}" height="${chartBottom - yy}" fill="${color}" rx="2" onclick="selectElement('${sym}')"/>`;
+    svgContent += `<text class="el-value" x="${x + w/2}" y="${yy - 5}">${val}</text>`;
+    svgContent += `<text class="el-label" x="${x + w/2}" y="${chartBottom + 18}">${sym}</text>`;
+  });
+
+  // dip markers between specific pairs
+  const dips = [["Be","B"], ["N","O"], ["Mg","Al"], ["P","S"]];
+  dips.forEach(([a, b]) => {
+    const ia = elements.findIndex(e => e[1] === a);
+    const ib = elements.findIndex(e => e[1] === b);
+    const midX = chartLeft + (ia + 0.5) * barW + barW/2;
+    svgContent += `<text class="dip-mark" x="${midX}" y="${chartTop + 4}">&#8595;</text>`;
+  });
+
+  svg.innerHTML = svgContent;
+}
+
+// ---- Ladder chart: successive IEs for one element, log scale ----
+function selectElement(sym){
+  document.querySelectorAll('.bar').forEach(b => b.classList.remove('selected'));
+  document.getElementById('bar-' + sym).classList.add('selected');
+
+  const el = elements.find(e => e[1] === sym);
+  const [z, symbol, name, ies] = el;
+  const validIEs = ies.filter(v => v !== null);
+
+  document.getElementById('ladderInstruction').style.display = 'none';
+
+  const W = 960, H = 300, chartTop = 30, chartBottom = 230, chartLeft = 50, chartRight = 940;
+  const logMin = 2.5, logMax = 5.05; // log10(316) to log10(112000) roughly, fixed for comparability
+  const barW = (chartRight - chartLeft) / validIEs.length;
+
+  function y(val){
+    const lg = Math.log10(val);
+    const frac = (lg - logMin) / (logMax - logMin);
+    return chartBottom - frac * (chartBottom - chartTop);
+  }
+
+  // detect the single true shell-breaking jump: the LARGEST consecutive ratio,
+  // but only if it clears a minimum threshold (distinguishes a real shell break
+  // from the normal steady increase every element shows anyway).
+  const ratios = [];
+  for(let i = 1; i < validIEs.length; i++){
+    ratios.push(validIEs[i] / validIEs[i-1]);
+  }
+  const bigJumpThreshold = 2.5;
+  const jumpIndices = [];
+  if(ratios.length > 0){
+    const maxRatio = Math.max(...ratios);
+    const maxIdx = ratios.indexOf(maxRatio);
+    if(maxRatio >= bigJumpThreshold) jumpIndices.push(maxIdx + 1); // index of the IE that jumped up
+  }
+
+  let svgContent = '';
+
+  // y gridlines at powers of ten-ish reference points
+  [1000, 10000, 100000].forEach(v => {
+    if(Math.log10(v) >= logMin && Math.log10(v) <= logMax){
+      const yy = y(v);
+      svgContent += `<line x1="${chartLeft}" y1="${yy}" x2="${chartRight}" y2="${yy}" stroke="#eee" stroke-width="1"/>`;
+      svgContent += `<text class="ie-tick" x="${chartLeft-10}" y="${yy+4}" text-anchor="end" style="font-size:10px;">${v.toLocaleString()}</text>`;
+    }
+  });
+
+  validIEs.forEach((val, i) => {
+    const x = chartLeft + i * barW + barW * 0.15;
+    const w = barW * 0.7;
+    const yy = y(val);
+    const isJumpStart = jumpIndices.includes(i);
+    svgContent += `<rect class="ie-bar${isJumpStart ? ' jump-start' : ''}" x="${x}" y="${yy}" width="${w}" height="${chartBottom - yy}" rx="3"/>`;
+    svgContent += `<text class="ie-num" x="${x + w/2}" y="${chartBottom - 6}">${val >= 1000 ? Math.round(val/1000)+'k' : val}</text>`;
+    svgContent += `<text class="ie-tick" x="${x + w/2}" y="${chartBottom + 20}">IE${i+1}</text>`;
+  });
+
+  // jump brackets + labels
+  jumpIndices.forEach(idx => {
+    const xPrev = chartLeft + (idx-1) * barW + barW/2;
+    const xCurr = chartLeft + idx * barW + barW/2;
+    const bracketY = chartTop - 6;
+    svgContent += `<path class="jump-bracket" d="M${xPrev},${bracketY+10} L${xPrev},${bracketY} L${xCurr},${bracketY} L${xCurr},${bracketY+10}"/>`;
+    svgContent += `<text class="jump-label" x="${(xPrev+xCurr)/2}" y="${bracketY-4}" text-anchor="middle">big jump</text>`;
+  });
+
+  const svgHtml = `<svg width="100%" viewBox="0 0 ${W} ${H}">${svgContent}</svg>`;
+
+  const valence = jumpIndices.length > 0 ? jumpIndices[0] : validIEs.length;
+  let jumpExplainHtml = '';
+  if(jumpIndices.length > 0){
+    const n = jumpIndices[0];
+    jumpExplainHtml = `<div class="jump-explain">
+      <b>Why the jump after IE${n}?</b> Removing the ${ordinal(n+1)} electron means breaking into a full inner shell for the first time &mdash; that takes far more energy than removing an outer electron. This tells us ${symbol} has <b>${n} electron${n>1?'s':''} in its outer shell</b>, matching its position in Group ${groupFromValence(z, n)}.
+    </div>`;
+  } else if(validIEs.length <= 1){
+    jumpExplainHtml = `<div class="jump-explain">Only one ionisation energy is available for ${symbol} in this table, so there's no jump to compare yet.</div>`;
+  } else {
+    jumpExplainHtml = `<div class="jump-explain">No dramatic jump shows up here &mdash; every electron removed so far has come from the <b>same outer shell</b>. ${symbol} would need at least ${validIEs.length + 1} ionisation energies before a jump into the next shell down would appear.</div>`;
+  }
+
+  document.getElementById('ladderContent').innerHTML = `
+    <div class="ladder-header">
+      <span class="ladder-symbol">${symbol}</span>
+      <span class="ladder-name">${name} &middot; Z = ${z}</span>
+    </div>
+    ${svgHtml}
+    ${jumpExplainHtml}
+  `;
+}
+
+function ordinal(n){
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+function groupFromValence(z, n){
+  if(z <= 2) return n; // period 1: H=1, He=2 (noble gas, treat as 18 conventionally but keep simple here)
+  if(n === 1) return "1";
+  if(n === 2) return "2";
+  if(n >= 3 && n <= 7) return (10 + n); // Group 13-17 style numbering
+  if(n === 8) return "18";
+  return n;
+}
+
+buildMainChart();
+</script>
+</body>
+</html>
