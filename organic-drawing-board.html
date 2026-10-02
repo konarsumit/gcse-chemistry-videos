@@ -48,8 +48,9 @@
 
   .board-row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;}
   .board-box{flex:2;min-width:340px;}
-  .board-side{font-size:13px;color:var(--text);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-height:60px;}
+  .board-side{font-size:13px;color:var(--text);line-height:1.7;}
   .board-side b{color:var(--accent);}
+  .board-side-details{border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:var(--bg);}
   .board-side-col{flex:1;min-width:260px;max-width:100%;display:flex;flex-direction:column;gap:12px;}
   .build-toolbox{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fff;min-width:0;}
   .build-toolbox .toolbar{margin-bottom:8px;}
@@ -162,7 +163,10 @@
         <div class="formula-readout" id="formulaReadout"></div>
       </div>
       <div class="board-side-col">
-        <div class="board-side" id="boardSide">Pick a molecule from the dropdown, type a formula above, or use the tools below to build one from scratch.</div>
+        <details class="board-side-details">
+          <summary style="cursor:pointer;font-weight:700;font-size:11.5px;color:var(--muted);padding:2px 0;">Atom info</summary>
+          <div class="board-side" id="boardSide" style="margin-top:8px;">Pick a molecule from the dropdown, type a formula above, or use the tools below to build one from scratch.</div>
+        </details>
         <div class="build-toolbox">
           <div class="tool-label" style="margin-bottom:2px;">Build atom-by-atom:</div>
           <div class="toolbar">
