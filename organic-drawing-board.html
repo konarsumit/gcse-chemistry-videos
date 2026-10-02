@@ -28,7 +28,7 @@
   .fact-tile .flabel{font-size:11.5px;color:var(--muted);margin-top:3px;}
 
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;}
-  .tool-group{display:flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:var(--bg);}
+  .tool-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:var(--bg);min-width:0;}
   .tool-label{font-size:11.5px;color:var(--muted);font-weight:700;margin-right:2px;}
   .tbtn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;}
   .tbtn:hover:not(:disabled){border-color:var(--accent);}
@@ -48,8 +48,13 @@
 
   .board-row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;}
   .board-box{flex:2;min-width:340px;}
-  .board-side{flex:1;min-width:230px;font-size:13px;color:var(--text);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-height:120px;}
+  .board-side{font-size:13px;color:var(--text);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-height:60px;}
   .board-side b{color:var(--accent);}
+  .board-side-col{flex:1;min-width:260px;max-width:100%;display:flex;flex-direction:column;gap:12px;}
+  .build-toolbox{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fff;min-width:0;}
+  .build-toolbox .toolbar{margin-bottom:8px;}
+  .build-toolbox .toolbar:last-child{margin-bottom:0;}
+  .build-toolbox .tool-group{background:var(--bg);}
   .board-svg{width:100%;background:#fff;border:1px solid var(--border);border-radius:12px;cursor:grab;touch-action:none;user-select:none;}
   .board-svg:active{cursor:grabbing;}
 
@@ -96,7 +101,11 @@
 
   <div class="card">
     <h2>Build a molecule</h2>
-    <p>Pick a molecule from the list, or type its molecular formula and let the board work out what it could be &mdash; some formulas (like CH&#8324;) only have one possible structure, others (like C&#8323;H&#8326;) have several, and you choose which one to see.</p>
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--accent);padding:2px 0;">How this works</summary>
+      <p style="margin:8px 0 4px;">Pick a molecule from the list, or type its molecular formula and let the board work out what it could be &mdash; some formulas (like CH&#8324;) only have one possible structure, others (like C&#8323;H&#8326;) have several, and you choose which one to see.</p>
+      <p style="margin:4px 0 0;">Or build one yourself with the tools beside the board: start from a single carbon, then keep extending the chain. Only the actions that are chemically valid right now are switched on.</p>
+    </details>
 
     <div class="toolbar" style="margin-bottom:6px;">
       <div class="tool-group">
@@ -136,51 +145,6 @@
       </div>
     </div>
 
-    <details style="margin-bottom:16px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:13.5px;color:var(--accent);padding:4px 0;">Build a molecule atom-by-atom yourself (advanced)</summary>
-      <p style="margin:8px 0 10px;">Start from a single carbon, then keep extending the chain. Only the actions that are chemically valid right now are switched on.</p>
-      <div class="toolbar">
-        <div class="tool-group">
-          <span class="tool-label">Next bond:</span>
-          <button class="tbtn order-btn active" data-order="1">single</button>
-          <button class="tbtn order-btn" data-order="2">double</button>
-          <button class="tbtn order-btn" data-order="3">triple</button>
-        </div>
-        <div class="tool-group">
-          <button class="tbtn" id="addCBtn">+ Carbon</button>
-          <button class="tbtn" id="addOBtn">+ Oxygen</button>
-          <button class="tbtn" id="addNBtn">+ Nitrogen</button>
-        </div>
-        <div class="tool-group">
-          <span class="tool-label">Halogen:</span>
-          <button class="tbtn" id="addFBtn">+ F</button>
-          <button class="tbtn" id="addClBtn">+ Cl</button>
-          <button class="tbtn" id="addBrBtn">+ Br</button>
-          <button class="tbtn" id="addIBtn">+ I</button>
-        </div>
-      </div>
-      <div class="toolbar">
-        <div class="tool-group">
-          <span class="tool-label">Functional group:</span>
-          <button class="tbtn" id="addOHBtn">&minus;OH (alcohol)</button>
-          <button class="tbtn" id="addKetoneBtn">=O (ketone, mid-chain)</button>
-          <button class="tbtn" id="addCHOBtn">&minus;CHO (aldehyde)</button>
-          <button class="tbtn" id="addCOOHBtn">&minus;COOH (acid)</button>
-          <button class="tbtn" id="esterifyBtn">Esterify &rarr; ester</button>
-        </div>
-      </div>
-      <div class="toolbar">
-        <div class="tool-group">
-          <button class="tbtn" id="closeRingBtn">&#8635; Close ring</button>
-          <button class="tbtn" id="undoBtn">&#8630; Undo last</button>
-          <button class="tbtn danger" id="clearBtn">&times; New molecule</button>
-          <label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-left:6px;">
-            <input type="checkbox" id="showMeasureChk"> show bond lengths &amp; angles
-          </label>
-        </div>
-      </div>
-    </details>
-
     <div class="board-row">
       <div class="board-box">
         <svg id="boardSvg" class="board-svg" viewBox="0 0 500 380" height="380"></svg>
@@ -197,11 +161,65 @@
         </div>
         <div class="formula-readout" id="formulaReadout"></div>
       </div>
-      <div class="board-side" id="boardSide">Pick a molecule from the dropdown, type a formula above, or open &ldquo;Build atom-by-atom&rdquo; below and press <b>+ Carbon</b> to start from scratch.</div>
+      <div class="board-side-col">
+        <div class="board-side" id="boardSide">Pick a molecule from the dropdown, type a formula above, or use the tools below to build one from scratch.</div>
+        <div class="build-toolbox">
+          <div class="tool-label" style="margin-bottom:2px;">Build atom-by-atom:</div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <span class="tool-label">Next bond:</span>
+              <button class="tbtn order-btn active" data-order="1">single</button>
+              <button class="tbtn order-btn" data-order="2">double</button>
+              <button class="tbtn order-btn" data-order="3">triple</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <button class="tbtn" id="addCBtn">+ Carbon</button>
+              <button class="tbtn" id="addOBtn">+ Oxygen</button>
+              <button class="tbtn" id="addNBtn">+ Nitrogen</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <span class="tool-label">Halogen:</span>
+              <button class="tbtn" id="addFBtn">+ F</button>
+              <button class="tbtn" id="addClBtn">+ Cl</button>
+              <button class="tbtn" id="addBrBtn">+ Br</button>
+              <button class="tbtn" id="addIBtn">+ I</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <span class="tool-label">Functional group:</span>
+              <button class="tbtn" id="addOHBtn">&minus;OH (alcohol)</button>
+              <button class="tbtn" id="addKetoneBtn">=O (ketone, mid-chain)</button>
+              <button class="tbtn" id="addCHOBtn">&minus;CHO (aldehyde)</button>
+              <button class="tbtn" id="addCOOHBtn">&minus;COOH (acid)</button>
+              <button class="tbtn" id="esterifyBtn">Esterify &rarr; ester</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <button class="tbtn" id="closeRingBtn">&#8635; Close ring</button>
+              <button class="tbtn" id="undoBtn">&#8630; Undo last</button>
+              <button class="tbtn danger" id="clearBtn">&times; New molecule</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                <input type="checkbox" id="showMeasureChk"> show bond lengths &amp; angles
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="quiz-box">
-      <div id="buildMcqHolder"></div>
-    </div>
+    <details class="quiz-box">
+      <summary style="cursor:pointer;font-weight:600;font-size:14px;color:var(--accent);">Check your understanding</summary>
+      <div id="buildMcqHolder" style="margin-top:10px;"></div>
+    </details>
   </div>
 
   <div class="card">
