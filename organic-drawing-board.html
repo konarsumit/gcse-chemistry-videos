@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organic drawing board</title>
+<style>
+  :root{
+    --bg:#faf9f6; --card:#ffffff; --border:#ddd9cf; --text:#2b2a27; --muted:#6f6d64;
+    --accent:#3457a0; --accent-bg:#E6EBF7;
+    --good:#3b9e5f; --good-bg:#e6f4ea; --bad:#c4453b; --bad-bg:#fbe8e6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px 16px 80px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  .badge{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-bg);padding:4px 10px;border-radius:20px;margin-bottom:10px;}
+  h1{font-size:26px;font-weight:600;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 24px;line-height:1.6;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:20px;}
+  .card h2{font-size:17px;font-weight:600;margin:0 0 12px;}
+  .card h3{font-size:14.5px;font-weight:700;margin:16px 0 8px;}
+  .card p{font-size:14px;line-height:1.7;margin:0 0 10px;}
+
+  .fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px;}
+  .fact-tile{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--bg);text-align:center;}
+  .fact-tile .fnum{font-size:15px;font-weight:700;color:var(--accent);}
+  .fact-tile .flabel{font-size:11.5px;color:var(--muted);margin-top:3px;}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;}
+  .tool-group{display:flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:var(--bg);}
+  .tool-label{font-size:11.5px;color:var(--muted);font-weight:700;margin-right:2px;}
+  .tbtn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;}
+  .tbtn:hover:not(:disabled){border-color:var(--accent);}
+  .tbtn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .tbtn:disabled{opacity:0.35;cursor:not-allowed;}
+  .tbtn.danger:hover:not(:disabled){border-color:var(--bad);}
+  .field{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:7px;padding:6px 10px;font-size:13px;font-family:inherit;}
+
+  details summary{list-style:none;}
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{content:'\25B8\00a0';}
+  details[open] summary::before{content:'\25BE\00a0';}
+
+  .preset-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .pbtn{border:1px solid var(--border);background:#fff;color:var(--muted);border-radius:16px;padding:5px 12px;font-size:12px;cursor:pointer;}
+  .pbtn:hover{border-color:var(--accent);color:var(--accent);}
+
+  .board-row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;}
+  .board-box{flex:2;min-width:340px;}
+  .board-side{flex:1;min-width:230px;font-size:13px;color:var(--text);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-height:120px;}
+  .board-side b{color:var(--accent);}
+  .board-svg{width:100%;background:#fff;border:1px solid var(--border);border-radius:12px;cursor:grab;touch-action:none;user-select:none;}
+  .board-svg:active{cursor:grabbing;}
+
+  .formula-readout{font-size:17px;font-weight:700;color:var(--accent);margin-top:8px;}
+
+  .legend-row{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap;align-items:center;}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+
+  .quiz-box{margin-top:16px;border-top:1px dashed var(--border);padding-top:14px;}
+  .opt-btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;transition:all .12s;margin:3px 6px 3px 0;}
+  .opt-btn:hover:not(:disabled){border-color:var(--accent);}
+  .opt-btn:disabled{cursor:default;}
+  .opt-btn.correct{background:var(--good-bg);border-color:var(--good);color:#1f5c37;font-weight:600;}
+  .opt-btn.wrong{background:var(--bad-bg);border-color:var(--bad);color:#8a2c24;font-weight:600;}
+  .opt-btn.reveal-correct{background:var(--good-bg);border-color:var(--good);color:#1f5c37;font-weight:600;}
+  .mcq-explain{display:none;font-size:12.8px;margin-top:8px;padding:9px 12px;border-radius:8px;background:var(--accent-bg);color:#1e3766;line-height:1.6;}
+  .mcq-explain.show{display:block;}
+
+  footer{margin-top:30px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">Interactive · build your own molecule</span>
+  <h1>Organic drawing board</h1>
+  <p class="sub">Build hydrocarbons, cycloalkanes, aromatic rings, alcohols, carboxylic acids, aldehydes, ketones and esters yourself — every bond length and bond angle is drawn to the real chemistry, not just guessed. The molecule is a real 3D model: drag it to spin it round, or turn on auto-rotate, and save a picture once you're happy with the view.</p>
+
+  <div class="card">
+    <details>
+      <summary style="cursor:pointer;font-weight:600;font-size:17px;">What to look out for as you build</summary>
+      <p style="margin-top:12px;">Two things change depending on what you draw, and this board draws them to scale so you can actually see it:</p>
+      <div class="fact-grid">
+        <div class="fact-tile"><div class="fnum">154 pm</div><div class="flabel">C&minus;C single bond</div></div>
+        <div class="fact-tile"><div class="fnum">134 pm</div><div class="flabel">C=C double bond (shorter)</div></div>
+        <div class="fact-tile"><div class="fnum">120 pm</div><div class="flabel">C&equiv;C triple bond (shortest)</div></div>
+        <div class="fact-tile"><div class="fnum">139 pm</div><div class="flabel">C&minus;C aromatic bond (benzene ring &mdash; equal all the way round)</div></div>
+        <div class="fact-tile"><div class="fnum">109.5&deg;</div><div class="flabel">bond angle, single bonds only (like CH&#8324;)</div></div>
+        <div class="fact-tile"><div class="fnum">120&deg;</div><div class="flabel">bond angle at a C=C or in a benzene ring</div></div>
+        <div class="fact-tile"><div class="fnum">180&deg;</div><div class="flabel">bond angle at a C&equiv;C (straight line)</div></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Build a molecule</h2>
+    <p>Pick a molecule from the list, or type its molecular formula and let the board work out what it could be &mdash; some formulas (like CH&#8324;) only have one possible structure, others (like C&#8323;H&#8326;) have several, and you choose which one to see.</p>
+
+    <div class="toolbar" style="margin-bottom:6px;">
+      <div class="tool-group">
+        <span class="tool-label">Load a molecule:</span>
+        <select id="presetSelect" class="field" style="min-width:230px;"></select>
+      </div>
+      <div class="tool-group">
+        <span class="tool-label">Or type a formula:</span>
+        <input type="text" id="formulaInput" class="field" placeholder="e.g. C4H10" style="width:110px;">
+        <button class="tbtn" id="formulaBuildBtn">Build it</button>
+      </div>
+    </div>
+    <div id="formulaMatches" style="font-size:13px;line-height:1.6;margin:0 0 14px;min-height:1px;"></div>
+
+    <div class="toolbar">
+      <div class="tool-group">
+        <span class="tool-label">Model:</span>
+        <select id="styleSelect" class="field">
+          <option value="ball">Ball &amp; stick</option>
+          <option value="wire">Wireframe</option>
+        </select>
+      </div>
+      <div class="tool-group">
+        <span class="tool-label">Background:</span>
+        <select id="bgSelect" class="field">
+          <option value="white">White</option>
+          <option value="black">Black</option>
+          <option value="blue">Blue</option>
+        </select>
+      </div>
+      <div class="tool-group">
+        <label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;">
+          <input type="checkbox" id="autoRotateChk"> auto-rotate
+        </label>
+        <button class="tbtn" id="resetViewBtn">&#8635; Reset view</button>
+        <button class="tbtn" id="saveImgBtn">&#128190; Save picture</button>
+      </div>
+    </div>
+
+    <details style="margin-bottom:16px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:13.5px;color:var(--accent);padding:4px 0;">Build a molecule atom-by-atom yourself (advanced)</summary>
+      <p style="margin:8px 0 10px;">Start from a single carbon, then keep extending the chain. Only the actions that are chemically valid right now are switched on.</p>
+      <div class="toolbar">
+        <div class="tool-group">
+          <span class="tool-label">Next bond:</span>
+          <button class="tbtn order-btn active" data-order="1">single</button>
+          <button class="tbtn order-btn" data-order="2">double</button>
+          <button class="tbtn order-btn" data-order="3">triple</button>
+        </div>
+        <div class="tool-group">
+          <button class="tbtn" id="addCBtn">+ Carbon</button>
+          <button class="tbtn" id="addOBtn">+ Oxygen</button>
+          <button class="tbtn" id="addNBtn">+ Nitrogen</button>
+        </div>
+        <div class="tool-group">
+          <span class="tool-label">Halogen:</span>
+          <button class="tbtn" id="addFBtn">+ F</button>
+          <button class="tbtn" id="addClBtn">+ Cl</button>
+          <button class="tbtn" id="addBrBtn">+ Br</button>
+          <button class="tbtn" id="addIBtn">+ I</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="tool-group">
+          <span class="tool-label">Functional group:</span>
+          <button class="tbtn" id="addOHBtn">&minus;OH (alcohol)</button>
+          <button class="tbtn" id="addKetoneBtn">=O (ketone, mid-chain)</button>
+          <button class="tbtn" id="addCHOBtn">&minus;CHO (aldehyde)</button>
+          <button class="tbtn" id="addCOOHBtn">&minus;COOH (acid)</button>
+          <button class="tbtn" id="esterifyBtn">Esterify &rarr; ester</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="tool-group">
+          <button class="tbtn" id="closeRingBtn">&#8635; Close ring</button>
+          <button class="tbtn" id="undoBtn">&#8630; Undo last</button>
+          <button class="tbtn danger" id="clearBtn">&times; New molecule</button>
+          <label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-left:6px;">
+            <input type="checkbox" id="showMeasureChk"> show bond lengths &amp; angles
+          </label>
+        </div>
+      </div>
+    </details>
+
+    <div class="board-row">
+      <div class="board-box">
+        <svg id="boardSvg" class="board-svg" viewBox="0 0 500 380" height="380"></svg>
+        <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px;">&#8226; drag the molecule to rotate it in 3D &#8226; click any atom to grow a bond from there &#8226;</div>
+        <div class="legend-row">
+          <div class="legend-item"><span class="legend-dot" style="background:#4a4a48"></span>carbon</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#c4453b"></span>oxygen</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#3457a0"></span>nitrogen</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#82c91e"></span>fluorine</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#2f9e44"></span>chlorine</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#8a3324"></span>bromine</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#6741d9"></span>iodine</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#e3e1db;border:1px solid #bbb"></span>hydrogen</div>
+        </div>
+        <div class="formula-readout" id="formulaReadout"></div>
+      </div>
+      <div class="board-side" id="boardSide">Pick a molecule from the dropdown, type a formula above, or open &ldquo;Build atom-by-atom&rdquo; below and press <b>+ Carbon</b> to start from scratch.</div>
+    </div>
+    <div class="quiz-box">
+      <div id="buildMcqHolder"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Quick-fire quiz</h2>
+    <div id="mixedMcqHolder"></div>
+  </div>
+
+  <footer>
+    Bond lengths use real average values (in picometres). Cyclohexane is drawn as a genuine puckered 3D "chair" &mdash; rotate it to see the ring carbons alternate above and below the mean plane, which is what keeps its bond angles close to the tetrahedral 109.5&deg; a flat hexagon (120&deg;) can't give it. Smaller rings like cyclopropane are drawn flat, since any three points always lie in one plane anyway.
+  </footer>
+</div>
+
+<script>
+const ns='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs){ const e=document.createElementNS(ns,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function norm(a){ a=a%360; if(a<0) a+=360; return a; }
+function rad(d){ return d*Math.PI/180; }
+
+// ---------------- chemistry constants ----------------
+const VALENCE = {C:4,O:2,H:1,N:3,F:1,Cl:1,Br:1,I:1};
+const BOND_LEN_PM = {
+  'C-C':{1:154,2:134,3:120,1.5:139}, 'C-O':{1:143,2:120}, 'C-H':{1:109}, 'O-H':{1:96},
+  'C-N':{1:147,2:128,3:116}, 'N-H':{1:101},
+  'C-F':{1:135}, 'C-Cl':{1:177}, 'C-Br':{1:194}, 'C-I':{1:214}
+};
+const PX_PER_PM = 0.46;
+const ELEMENT_COLOR = {C:'#4a4a48', O:'#c4453b', N:'#3457a0', F:'#82c91e', Cl:'#2f9e44', Br:'#8a3324', I:'#6741d9', H:'#e3e1db'};
+const ELEMENT_TEXT = {C:'#fff', O:'#fff', N:'#fff', F:'#2b2a27', Cl:'#fff', Br:'#fff', I:'#fff', H:'#2b2a27'};
+// Readable stand-alone colour for wireframe mode, where an atom is just a coloured line/label
+// with no ball behind it (ELEMENT_COLOR.H is a pale fill meant to sit *under* dark text, not
+// to be read as a line or label colour on its own).
+const ELEMENT_WIRE_COLOR = {C:'#4a4a48', O:'#c4453b', N:'#3457a0', F:'#5c8a16', Cl:'#2f9e44', Br:'#8a3324', I:'#6741d9', H:'#9a978a'};
+// A few colours need to flip to a lighter shade when the board's background is dark (black or
+// blue), so dark atoms/bonds/labels don't vanish against it. Anything not listed here already
+// has enough contrast on both light and dark backgrounds and stays the same.
+const ELEMENT_COLOR_DARKBG = { C:'#9a9890' };
+const ELEMENT_TEXT_DARKBG = { C:'#1a1a1a' };
+const ELEMENT_WIRE_COLOR_DARKBG = { C:'#b7b5ac', H:'#d8d6cc' };
+const BG_COLORS = { white:'#ffffff', black:'#0d0d0d', blue:'#0b2545' };
+let renderStyle = 'ball'; // 'ball' (ball-and-stick) or 'wire' (wireframe/skeletal)
+let bgMode = 'white'; // 'white' | 'black' | 'blue'
+function isDarkBg(){ return bgMode==='black' || bgMode==='blue'; }
+function elementColor(el){ return (isDarkBg() && ELEMENT_COLOR_DARKBG[el]) || ELEMENT_COLOR[el]; }
+function elementText(el){ return (isDarkBg() && ELEMENT_TEXT_DARKBG[el]) || ELEMENT_TEXT[el]; }
+function elementWireColor(el){ return (isDarkBg() && ELEMENT_WIRE_COLOR_DARKBG[el]) || ELEMENT_WIRE_COLOR[el]; }
+
+function bondLenPx(elA, elB, order){
+  const key = [elA,elB].sort().join('-');
+  const table = BOND_LEN_PM[key] || BOND_LEN_PM[[elB,elA].sort().join('-')];
+  const pm = (table && table[order]) || 150;
+  return pm * PX_PER_PM;
+}
+
+// ---------------- molecule model ----------------
+let mol, nextId, selectedId, firstId, history;
+function freshMolecule(){
+  mol = { atoms:{}, bonds:[], aromaticRings:[] };
+  nextId = 1; selectedId = null; firstId = null; history = [];
+}
+function snapshot(){ history.push(JSON.parse(JSON.stringify({mol,nextId,selectedId,firstId}))); if(history.length>60) history.shift(); }
+function undo(){
+  if(history.length===0) return;
+  const s = history.pop();
+  mol=s.mol; nextId=s.nextId; selectedId=s.selectedId; firstId=s.firstId;
+  render();
+}
+
+function neighbors(id){ return mol.bonds.filter(b=>b.a===id||b.b===id).map(b=>({id: b.a===id?b.b:b.a, order:b.order})); }
+function heavyNeighbors(id){ return neighbors(id).filter(n=> mol.atoms[n.id].element!=='H'); }
+function usedValence(id){ return neighbors(id).reduce((s,n)=>s+n.order,0); }
+function remainingValence(id){ return VALENCE[mol.atoms[id].element] - usedValence(id); }
+// Heavy-only remaining valence: ignores any H's currently attached, since H's are always
+// stripped and re-filled automatically around every edit. This is what should gate whether
+// a new heavy group/bond can be added.
+function remainingHeavyValence(id){
+  const used = heavyNeighbors(id).reduce((s,n)=>s+n.order,0);
+  return VALENCE[mol.atoms[id].element] - used;
+}
+
+function targetAngleFor(id, extraOrder){
+  const orders = neighbors(id).map(n=>n.order).concat(extraOrder?[extraOrder]:[]);
+  const maxOrder = orders.length? Math.max(...orders) : 1;
+  if(maxOrder>=3) return 180;
+  if(maxOrder>=1.5) return 120; // covers both a real double bond (2) and an aromatic bond (1.5)
+  return mol.atoms[id].element==='O' ? 104.5 : 109.5;
+}
+
+function angleTo(fromId,toId){
+  const a=mol.atoms[fromId], b=mol.atoms[toId];
+  return norm(Math.atan2(b.y-a.y, b.x-a.x)*180/Math.PI);
+}
+
+// ---- 3D tetrahedral "pop-out" geometry ----
+// A straight chain's backbone is built in a single flat plane (z=0) using the 2D "turtle
+// graphics" trick below — that's what keeps the familiar zigzag skeletal look. A ring (see
+// layoutRegularPolygon) instead puckers its backbone bonds into genuine 3D directions (a
+// "chair", for six-membered rings). Either way, a real tetrahedral (109.5°/111°-ish) carbon
+// that already has two bonds fixed has its OTHER two bonds pointing symmetrically out of
+// whichever plane those two bonds define — three, let alone four, mutually ~109.5° vectors
+// simply can't all lie in one plane. Those extra bonds are always hydrogens here, so this
+// function computes the two genuine 3D directions for them from an atom's actual first two
+// neighbour directions (which may themselves be in-plane, as in a chain, or already tilted
+// out of any single plane, as around a chair ring).
+//
+// Given two unit directions v0, v1 already ~109.5–111° apart, the classic tetrahedron
+// identity is: the other two vertex directions are -s/√3 ± q·√(2/3), where s is the
+// (normalised) bisector of v0+v1 and q is the unit vector perpendicular to the v0,v1 plane
+// (their cross product, normalised).
+function cross3(a,b){ return { x:a.y*b.z-a.z*b.y, y:a.z*b.x-a.x*b.z, z:a.x*b.y-a.y*b.x }; }
+function normalize3(v){ const len=Math.hypot(v.x,v.y,v.z)||1; return { x:v.x/len, y:v.y/len, z:v.z/len }; }
+function vecTo3(fromId,toId){ const a=mol.atoms[fromId], b=mol.atoms[toId]; return { x:b.x-a.x, y:b.y-a.y, z:(b.z||0)-(a.z||0) }; }
+function tetraPopout(parentId, existingCount){
+  const ns = neighbors(parentId);
+  const v0 = normalize3(vecTo3(parentId, ns[0].id));
+  const v1 = normalize3(vecTo3(parentId, ns[1].id));
+  const s = normalize3({x:v0.x+v1.x, y:v0.y+v1.y, z:v0.z+v1.z});
+  let q = normalize3(cross3(v0,v1));
+  if(!isFinite(q.x+q.y+q.z) || (q.x===0 && q.y===0 && q.z===0)) q = {x:0,y:0,z:1}; // degenerate guard
+  const sign = existingCount===2 ? 1 : -1; // "up" for the first extra bond, "down" for the second
+  return {
+    x: -s.x/Math.sqrt(3) + sign*q.x*Math.sqrt(2/3),
+    y: -s.y/Math.sqrt(3) + sign*q.y*Math.sqrt(2/3),
+    z: -s.z/Math.sqrt(3) + sign*q.z*Math.sqrt(2/3)
+  };
+}
+
+// Returns a 3D unit direction {x,y,z} for a NEW bond out of parentId, plus which turn sign
+// (if any) was used, so the caller can propagate correct zigzag alternation to the child.
+//
+// The key idea for in-plane placement: each atom stores `.heading`, the direction of the
+// bond that CREATED it (i.e. parent->self). To make the angle AT this atom between its
+// existing bond and a new one equal exactly targetAngle, the new bond's direction is (this
+// atom's own incoming heading) turned by ±(180-targetAngle) — the classic "turtle graphics"
+// exterior-angle turn. This is what actually produces a clean, non-overlapping zigzag with
+// the correct interior angle, rather than measuring off the existing bond's direction
+// directly (which gives the supplementary angle instead).
+function nextDir(parentId, newOrder, newElement){
+  const p = mol.atoms[parentId];
+  const existingCount = neighbors(parentId).length;
+  const targetAngle = targetAngleFor(parentId, newOrder);
+  if(existingCount===0){
+    const h = p.startHeading!==undefined ? p.startHeading : -20;
+    return { dir3:{x:Math.cos(rad(h)), y:Math.sin(rad(h)), z:0}, turnUsed: null };
+  }
+  if(existingCount===1){
+    const turn = p.nextTurn===undefined ? 1 : p.nextTurn;
+    const dir = norm(p.heading + turn*(180-targetAngle));
+    return { dir3:{x:Math.cos(rad(dir)), y:Math.sin(rad(dir)), z:0}, turnUsed: turn };
+  }
+  // 2 or 3 existing bonds, adding a hydrogen to a genuinely tetrahedral (109.5°) centre:
+  // the only case that truly needs to leave the backbone plane (see tetraPopout above).
+  if(existingCount>=2 && newElement==='H' && targetAngle===109.5){
+    return { dir3: tetraPopout(parentId, existingCount), turnUsed: null };
+  }
+  // Otherwise (a third trigonal-planar substituent, or the rare extra heavy branch):
+  // bisect the largest angular gap among the existing bonds' ACTUAL in-plane directions.
+  // (This correctly places, e.g., a ketone's second chain carbon exactly 120° from the
+  // other two, since those two were already placed 120° apart by the rule above.)
+  const existingDirs = neighbors(parentId).map(n=> angleTo(parentId, n.id));
+  const sorted = existingDirs.slice().sort((x,y)=>x-y);
+  let bestGap=-1, bestMid=0;
+  for(let i=0;i<sorted.length;i++){
+    const a1=sorted[i];
+    let a2 = i===sorted.length-1 ? sorted[0]+360 : sorted[i+1];
+    const gap=a2-a1;
+    if(gap>bestGap){ bestGap=gap; bestMid=norm(a1+gap/2); }
+  }
+  return { dir3:{x:Math.cos(rad(bestMid)), y:Math.sin(rad(bestMid)), z:0}, turnUsed: null };
+}
+
+function addAtom(parentId, element, order){
+  const id = nextId++;
+  const { dir3, turnUsed } = nextDir(parentId, order, element);
+  const len = bondLenPx(mol.atoms[parentId].element, element, order);
+  const p = mol.atoms[parentId];
+  // Seed the new atom's own alternation: opposite of whatever turn was just used to place
+  // it, so the zigzag keeps alternating correctly if the chain continues from here. (Only
+  // matters for further in-plane growth; hydrogens are always leaves so it's never used.)
+  const childNextTurn = turnUsed!==null ? -turnUsed : 1;
+  const heading = norm(Math.atan2(dir3.y, dir3.x)*180/Math.PI);
+  mol.atoms[id] = {
+    element,
+    x: p.x + len*dir3.x, y: p.y + len*dir3.y, z: (p.z||0) + len*dir3.z,
+    heading, nextTurn: childNextTurn
+  };
+  mol.bonds.push({a:parentId, b:id, order});
+  return id;
+}
+function addFirstAtom(element){
+  const id = nextId++;
+  // The root atom has no real "incoming bond", but the turtle formula in nextDir's
+  // existingCount===1 branch needs a `.heading` to measure the second substituent's turn
+  // from. We give it a virtual incoming heading of startHeading+180 (as if a bond had
+  // arrived from the opposite side of where its first outgoing bond will point) so the
+  // exact same turn formula used everywhere else places the root atom's substituents at
+  // the correct interior angle too.
+  mol.atoms[id] = { element, x:250, y:190, z:0, nextTurn:1, startHeading:-20, heading: norm(-20+180) };
+  firstId = id;
+  return id;
+}
+function fillHydrogens(id){
+  let rem = remainingValence(id);
+  while(rem>0){
+    addAtom(id, 'H', 1);
+    rem = remainingValence(id);
+  }
+}
+function fillAllHydrogens(){
+  Object.keys(mol.atoms).forEach(id=>{
+    id = parseInt(id,10);
+    if(mol.atoms[id].element!=='H') fillHydrogens(id);
+  });
+}
+
+// ---- high level actions ----
+function actionAddHeavy(element, order){
+  snapshot();
+  if(selectedId===null){
+    const id = addFirstAtom(element);
+    selectedId = id;
+  } else {
+    // remove any H's currently on selected atom, we'll re-fill after
+    stripHydrogens(selectedId);
+    const id = addAtom(selectedId, element, order);
+    fillHydrogens(selectedId);
+    selectedId = id;
+  }
+  fillHydrogens(selectedId);
+  render();
+}
+function stripHydrogens(id){
+  const hNeighbors = neighbors(id).filter(n=>mol.atoms[n.id].element==='H');
+  hNeighbors.forEach(n=>{
+    delete mol.atoms[n.id];
+    mol.bonds = mol.bonds.filter(b=> !(b.a===n.id||b.b===n.id));
+  });
+}
+function actionAddOH(){
+  if(selectedId===null || remainingHeavyValence(selectedId)<1) return;
+  snapshot();
+  stripHydrogens(selectedId);
+  const oId = addAtom(selectedId, 'O', 1);
+  fillHydrogens(oId);
+  fillHydrogens(selectedId);
+  render();
+}
+function actionAddKetone(){
+  if(selectedId===null || remainingHeavyValence(selectedId)<2) return;
+  snapshot();
+  stripHydrogens(selectedId);
+  addAtom(selectedId, 'O', 2); // leave selectedId's remaining valence open for chain to continue
+  render();
+}
+function actionAddCHO(){
+  if(selectedId===null || remainingHeavyValence(selectedId)<1) return;
+  snapshot();
+  stripHydrogens(selectedId);
+  const cId = addAtom(selectedId, 'C', 1);
+  addAtom(cId, 'O', 2);
+  fillHydrogens(cId); // fills the single remaining H on the aldehyde carbon
+  fillHydrogens(selectedId);
+  selectedId = cId;
+  render();
+}
+function actionAddCOOH(){
+  if(selectedId===null || remainingHeavyValence(selectedId)<1) return;
+  snapshot();
+  stripHydrogens(selectedId);
+  const cId = addAtom(selectedId, 'C', 1);
+  addAtom(cId, 'O', 2);
+  const ohId = addAtom(cId, 'O', 1);
+  fillHydrogens(ohId);
+  fillHydrogens(selectedId);
+  selectedId = cId;
+  render();
+}
+function esterOHCandidate(){
+  // find an -OH oxygen (single-bonded O with exactly one H and one C neighbor) attached to a carbon that also has a C=O (i.e. a carboxylic acid group)
+  for(const id in mol.atoms){
+    const a = mol.atoms[id];
+    if(a.element!=='O') continue;
+    const ns = neighbors(id);
+    if(ns.length!==2) continue;
+    const hN = ns.find(n=>mol.atoms[n.id].element==='H');
+    const cN = ns.find(n=>mol.atoms[n.id].element==='C' && n.order===1);
+    if(!hN || !cN) continue;
+    const carbonHasCarbonyl = heavyNeighbors(cN.id).some(n=> mol.atoms[n.id].element==='O' && n.order===2);
+    if(carbonHasCarbonyl) return { oId: parseInt(id,10), hId: hN.id };
+  }
+  return null;
+}
+function actionEsterify(){
+  const cand = esterOHCandidate();
+  if(!cand) return;
+  snapshot();
+  delete mol.atoms[cand.hId];
+  mol.bonds = mol.bonds.filter(b=> !(b.a===cand.hId||b.b===cand.hId));
+  const cId = addAtom(cand.oId, 'C', 1);
+  fillHydrogens(cId);
+  render();
+}
+function canCloseRing(){
+  if(firstId===null || selectedId===null || selectedId===firstId) return false;
+  if(remainingHeavyValence(selectedId)<1 || remainingHeavyValence(firstId)<1) return false;
+  // already a ring?
+  const already = mol.bonds.some(b=> (b.a===firstId&&b.b===selectedId)||(b.a===selectedId&&b.b===firstId));
+  if(already) return false;
+  // require at least 3 heavy atoms in the backbone chain from first to selected
+  return countHeavyAtoms()>=3;
+}
+function countHeavyAtoms(){ return Object.values(mol.atoms).filter(a=>a.element!=='H').length; }
+function actionCloseRing(){
+  if(!canCloseRing()) return;
+  snapshot();
+  stripHydrogens(selectedId); stripHydrogens(firstId);
+  mol.bonds.push({a:selectedId,b:firstId,order:1});
+  // find the ring path (first..selected via existing chain) and lay out as regular polygon
+  const ringIds = findRingPath(firstId, selectedId);
+  if(ringIds){
+    layoutRegularPolygon(ringIds);
+  }
+  fillHydrogens(selectedId); fillHydrogens(firstId);
+  // also refill H's for all ring members since their geometry changed
+  ringIds && ringIds.forEach(id=>{ stripHydrogens(id); });
+  ringIds && ringIds.forEach(id=>{ fillHydrogens(id); });
+  render();
+}
+function findRingPath(fromId, toId){
+  // simple BFS along heavy-atom bonds (excluding the just-added closing bond) to find the chain path
+  const visited = {[fromId]:null};
+  const queue=[fromId];
+  while(queue.length){
+    const cur = queue.shift();
+    if(cur===toId) break;
+    for(const n of heavyNeighbors(cur)){
+      if((cur===fromId&&n.id===toId)||(cur===toId&&n.id===fromId)) continue; // skip the closing bond
+      if(!(n.id in visited)){ visited[n.id]=cur; queue.push(n.id); }
+    }
+  }
+  if(!(toId in visited)) return null;
+  const path=[toId]; let cur=toId;
+  while(cur!==fromId){ cur=visited[cur]; path.push(cur); }
+  return path.reverse();
+}
+function layoutRegularPolygon(ids){
+  const n = ids.length;
+  const sideLen = bondLenPx('C','C',1);
+  const cx=250, cy=190;
+  const startAngle = -90;
+  if(n===6){
+    // Real cyclohexane isn't flat — it puckers into a "chair" to keep its bond angles close
+    // to tetrahedral instead of the 120° a flat hexagon would force. This alternates each
+    // ring carbon up/down out of the mean plane by a fixed amount (as a fraction of the C-C
+    // bond length) chosen so every C-C-C ring angle comes out to ~111°, matching the real
+    // chair conformation — and it's the SAME formula used everywhere else in this file
+    // (angle3) that then measures and displays that ~111°, not a hard-coded number.
+    const hFrac = 0.153, rFrac = Math.sqrt(1 - 4*hFrac*hFrac);
+    const R = sideLen*rFrac, h = sideLen*hFrac;
+    ids.forEach((id,i)=>{
+      const ang = rad(startAngle + i*(360/n));
+      mol.atoms[id].x = cx + R*Math.cos(ang);
+      mol.atoms[id].y = cy + R*Math.sin(ang);
+      mol.atoms[id].z = (i%2===0 ? 1 : -1) * h;
+      mol.atoms[id].nextTurn = 1;
+    });
+    return;
+  }
+  // Smaller/odd rings (cyclopropane, and any ring a student builds by hand) are kept flat —
+  // three points are always coplanar anyway, and a simple alternating pucker only works
+  // cleanly for an even-numbered ring.
+  const circumradius = sideLen / (2*Math.sin(Math.PI/n));
+  ids.forEach((id,i)=>{
+    const ang = rad(startAngle + i*(360/n));
+    mol.atoms[id].x = cx + circumradius*Math.cos(ang);
+    mol.atoms[id].y = cy + circumradius*Math.sin(ang);
+    mol.atoms[id].z = 0;
+    mol.atoms[id].nextTurn = 1;
+  });
+}
+// Real 3D angle (in degrees) at atom pId between neighbours aId and bId — used for the
+// on-screen angle overlay, so it stays correct even where a hydrogen has popped out of the
+// backbone plane (the ring/backbone atoms themselves are always flat, so for every angle the
+// overlay actually displays, this gives the same number the old flat 2D version did).
+function angle3(aId, pId, bId){
+  const p=mol.atoms[pId], A=mol.atoms[aId], B=mol.atoms[bId];
+  const v1={x:A.x-p.x, y:A.y-p.y, z:(A.z||0)-(p.z||0)};
+  const v2={x:B.x-p.x, y:B.y-p.y, z:(B.z||0)-(p.z||0)};
+  const len1=Math.hypot(v1.x,v1.y,v1.z), len2=Math.hypot(v2.x,v2.y,v2.z);
+  const dot=(v1.x*v2.x+v1.y*v2.y+v1.z*v2.z)/(len1*len2);
+  return Math.acos(Math.max(-1,Math.min(1,dot)))*180/Math.PI;
+}
+function actionClear(){ snapshot(); freshMolecule(); render(); }
+let markerHidden = false, markerTrackedId = null;
+function selectAtom(id){
+  if(mol.atoms[id].element==='H') return;
+  if(id===selectedId){
+    // Clicking the already-selected atom again just toggles its "growing from here"
+    // marker off (or back on) without changing the selection itself.
+    markerHidden = !markerHidden;
+    render();
+    return;
+  }
+  selectedId = id; render();
+}
+
+// ---- aromatic (benzene) rings ----
+// A benzene ring can't be grown one bond at a time from a single tip the way a chain can —
+// all six carbons need to exist before any of them has its final, correct 120° geometry — so
+// this builds the whole flat hexagon in one go, using a genuine "aromatic" bond order of 1.5
+// (rather than picking one fixed Kekulé structure of alternating single/double bonds). That
+// keeps every ring bond the same real length (139 pm, between a single and a double bond) and
+// every ring angle exactly 120°, which is the actual reason a benzene ring is always drawn
+// with the delocalisation circle: the electrons are spread evenly around the ring, not fixed
+// in three alternating double bonds.
+function buildBenzeneRing(){
+  const aromLen = bondLenPx('C','C',1.5);
+  const R = aromLen; // regular hexagon: circumradius === side length
+  const cx=250, cy=190, startAngle=-90;
+  const ids=[];
+  for(let i=0;i<6;i++){
+    const id = nextId++;
+    const ang = rad(startAngle + i*60);
+    mol.atoms[id] = { element:'C', x:cx+R*Math.cos(ang), y:cy+R*Math.sin(ang), z:0, heading:0, nextTurn:1 };
+    ids.push(id);
+  }
+  for(let i=0;i<6;i++) mol.bonds.push({ a:ids[i], b:ids[(i+1)%6], order:1.5 });
+  mol.aromaticRings.push(ids.slice());
+  ids.forEach(id=> fillHydrogens(id));
+  firstId = ids[0];
+  selectedId = ids[0];
+  return ids;
+}
+
+// ---------------- generic straight/branched-chain builder ----------------
+// Almost every alkane, cycloalkane, alkene, alcohol and carboxylic acid is "a main chain of N
+// carbons, maybe with a C=C at one position, maybe with a methyl/ethyl branch or two, maybe
+// ending in -OH or -COOH, maybe joined into a ring" — so rather than hand-scripting dozens of
+// near-identical presets, this builds any of them from one small spec object. `at`/`doubleAt`
+// use the same number a chemist would (the IUPAC locant), so the spec reads like the name.
+function buildAlkaneLike(spec){
+  freshMolecule();
+  const ids = [];
+  for(let i=1;i<=spec.chainLength;i++){
+    let order = 1;
+    if(spec.doubleAt===i-1) order = 2; // bond coming INTO carbon i, from carbon i-1
+    if(spec.tripleAt===i-1) order = 3;
+    actionAddHeavy('C', order);
+    ids.push(selectedId);
+    const myBranches = (spec.branches||[]).filter(b=>b.at===i);
+    myBranches.forEach(b=>{
+      selectedId = ids[i-1]; // branch off the main-chain carbon, not off a previous branch
+      for(let k=0;k<b.len;k++) actionAddHeavy('C',1);
+    });
+    if(myBranches.length) selectedId = ids[i-1]; // restore the main-chain tip before continuing
+  }
+  if(spec.oh){ selectedId = ids[spec.oh-1]; actionAddOH(); }
+  if(spec.cooh){ selectedId = ids[ids.length-1]; actionAddCOOH(); }
+  if(spec.ring){ actionCloseRing(); }
+  return ids;
+}
+
+// ---------------- presets ----------------
+// Every preset is just a scripted sequence of the same action functions a student would
+// click through by hand, so presets can never drift out of sync with the valence/geometry engine.
+const PRESETS = {
+  methane: ()=>{ freshMolecule(); actionAddHeavy('C',1); },
+  ethane: ()=> buildAlkaneLike({chainLength:2}),
+  propane: ()=> buildAlkaneLike({chainLength:3}),
+  butane: ()=> buildAlkaneLike({chainLength:4}),
+  pentane: ()=> buildAlkaneLike({chainLength:5}),
+  hexane: ()=> buildAlkaneLike({chainLength:6}),
+  heptane: ()=> buildAlkaneLike({chainLength:7}),
+  octane: ()=> buildAlkaneLike({chainLength:8}),
+  '2-methylpropane': ()=> buildAlkaneLike({chainLength:3, branches:[{at:2,len:1}]}),
+  '2-methylbutane': ()=> buildAlkaneLike({chainLength:4, branches:[{at:2,len:1}]}),
+  '2,2-dimethylpropane': ()=> buildAlkaneLike({chainLength:3, branches:[{at:2,len:1},{at:2,len:1}]}),
+  '2-methylpentane': ()=> buildAlkaneLike({chainLength:5, branches:[{at:2,len:1}]}),
+  '3-methylpentane': ()=> buildAlkaneLike({chainLength:5, branches:[{at:3,len:1}]}),
+  '2,2-dimethylbutane': ()=> buildAlkaneLike({chainLength:4, branches:[{at:2,len:1},{at:2,len:1}]}),
+  '2,3-dimethylbutane': ()=> buildAlkaneLike({chainLength:4, branches:[{at:2,len:1},{at:3,len:1}]}),
+  '3-ethylpentane': ()=> buildAlkaneLike({chainLength:5, branches:[{at:3,len:2}]}),
+  '2,2,3-trimethylbutane': ()=> buildAlkaneLike({chainLength:4, branches:[{at:2,len:1},{at:2,len:1},{at:3,len:1}]}),
+
+  ethene: ()=> buildAlkaneLike({chainLength:2, doubleAt:1}),
+  propene: ()=> buildAlkaneLike({chainLength:3, doubleAt:1}),
+  'but-1-ene': ()=> buildAlkaneLike({chainLength:4, doubleAt:1}),
+  'but-2-ene': ()=> buildAlkaneLike({chainLength:4, doubleAt:2}),
+  '2-methylpropene': ()=> buildAlkaneLike({chainLength:3, doubleAt:1, branches:[{at:2,len:1}]}),
+  'pent-1-ene': ()=> buildAlkaneLike({chainLength:5, doubleAt:1}),
+  'pent-2-ene': ()=> buildAlkaneLike({chainLength:5, doubleAt:2}),
+  'hex-1-ene': ()=> buildAlkaneLike({chainLength:6, doubleAt:1}),
+  'hex-2-ene': ()=> buildAlkaneLike({chainLength:6, doubleAt:2}),
+  'hept-1-ene': ()=> buildAlkaneLike({chainLength:7, doubleAt:1}),
+  'oct-1-ene': ()=> buildAlkaneLike({chainLength:8, doubleAt:1}),
+  ethyne: ()=> buildAlkaneLike({chainLength:2, tripleAt:1}),
+
+  cyclopropane: ()=> buildAlkaneLike({chainLength:3, ring:true}),
+  cyclobutane: ()=> buildAlkaneLike({chainLength:4, ring:true}),
+  cyclopentane: ()=> buildAlkaneLike({chainLength:5, ring:true}),
+  cyclohexane: ()=> buildAlkaneLike({chainLength:6, ring:true}),
+  cycloheptane: ()=> buildAlkaneLike({chainLength:7, ring:true}),
+  cyclooctane: ()=> buildAlkaneLike({chainLength:8, ring:true}),
+
+  methanol: ()=> buildAlkaneLike({chainLength:1, oh:1}),
+  ethanol: ()=> buildAlkaneLike({chainLength:2, oh:1}),
+  'propan-1-ol': ()=> buildAlkaneLike({chainLength:3, oh:1}),
+  'propan-2-ol': ()=> buildAlkaneLike({chainLength:3, oh:2}),
+  'butan-1-ol': ()=> buildAlkaneLike({chainLength:4, oh:1}),
+  'butan-2-ol': ()=> buildAlkaneLike({chainLength:4, oh:2}),
+  'pentan-1-ol': ()=> buildAlkaneLike({chainLength:5, oh:1}),
+  'pentan-2-ol': ()=> buildAlkaneLike({chainLength:5, oh:2}),
+  'pentan-3-ol': ()=> buildAlkaneLike({chainLength:5, oh:3}),
+  'hexan-1-ol': ()=> buildAlkaneLike({chainLength:6, oh:1}),
+  'heptan-1-ol': ()=> buildAlkaneLike({chainLength:7, oh:1}),
+  'octan-1-ol': ()=> buildAlkaneLike({chainLength:8, oh:1}),
+
+  'methanoic acid': ()=>{ freshMolecule(); const cId=addFirstAtom('C'); addAtom(cId,'O',2); const ohId=addAtom(cId,'O',1); fillHydrogens(ohId); fillHydrogens(cId); selectedId=cId; render(); },
+  'ethanoic acid': ()=> buildAlkaneLike({chainLength:1, cooh:true}),
+  'propanoic acid': ()=> buildAlkaneLike({chainLength:2, cooh:true}),
+  'butanoic acid': ()=> buildAlkaneLike({chainLength:3, cooh:true}),
+  'pentanoic acid': ()=> buildAlkaneLike({chainLength:4, cooh:true}),
+  'hexanoic acid': ()=> buildAlkaneLike({chainLength:5, cooh:true}),
+  'heptanoic acid': ()=> buildAlkaneLike({chainLength:6, cooh:true}),
+  'octanoic acid': ()=> buildAlkaneLike({chainLength:7, cooh:true}),
+
+  ethanal: ()=>{ freshMolecule(); actionAddHeavy('C',1); actionAddCHO(); },
+  propanone: ()=>{ freshMolecule(); actionAddHeavy('C',1); actionAddHeavy('C',1); actionAddKetone(); actionAddHeavy('C',1); },
+  'methyl ethanoate': ()=>{ freshMolecule(); actionAddHeavy('C',1); actionAddHeavy('C',1); actionAddCOOH(); actionEsterify(); },
+  benzene: ()=>{ freshMolecule(); buildBenzeneRing(); },
+  toluene: ()=>{ freshMolecule(); const r=buildBenzeneRing(); selectedId=r[0]; actionAddHeavy('C',1); },
+  phenol: ()=>{ freshMolecule(); const r=buildBenzeneRing(); selectedId=r[0]; actionAddOH(); },
+  'ortho-xylene': ()=>{ freshMolecule(); const r=buildBenzeneRing(); selectedId=r[0]; actionAddHeavy('C',1); selectedId=r[1]; actionAddHeavy('C',1); },
+  'meta-xylene': ()=>{ freshMolecule(); const r=buildBenzeneRing(); selectedId=r[0]; actionAddHeavy('C',1); selectedId=r[2]; actionAddHeavy('C',1); },
+  'para-xylene': ()=>{ freshMolecule(); const r=buildBenzeneRing(); selectedId=r[0]; actionAddHeavy('C',1); selectedId=r[3]; actionAddHeavy('C',1); },
+  chloromethane: ()=>{ freshMolecule(); actionAddHeavy('C',1); actionAddHeavy('Cl',1); },
+  methylamine: ()=>{ freshMolecule(); actionAddHeavy('C',1); actionAddHeavy('N',1); }
+};
+// How the preset picker is grouped and ordered — purely a display concern, kept separate from
+// PRESETS itself so the lookup object above can stay in whatever order is easiest to read.
+const PRESET_GROUPS = [
+  { label:'Alkanes (CₙH₂ₙ₊₂)', keys:['methane','ethane','propane','butane','pentane','hexane','heptane','octane','2-methylpropane','2-methylbutane','2,2-dimethylpropane','2-methylpentane','3-methylpentane','2,2-dimethylbutane','2,3-dimethylbutane','3-ethylpentane','2,2,3-trimethylbutane'] },
+  { label:'Cycloalkanes (CₙH₂ₙ)', keys:['cyclopropane','cyclobutane','cyclopentane','cyclohexane','cycloheptane','cyclooctane'] },
+  { label:'Alkenes (CₙH₂ₙ)', keys:['ethene','propene','but-1-ene','but-2-ene','2-methylpropene','pent-1-ene','pent-2-ene','hex-1-ene','hex-2-ene','hept-1-ene','oct-1-ene'] },
+  { label:'Alkynes', keys:['ethyne'] },
+  { label:'Alcohols', keys:['methanol','ethanol','propan-1-ol','propan-2-ol','butan-1-ol','butan-2-ol','pentan-1-ol','pentan-2-ol','pentan-3-ol','hexan-1-ol','heptan-1-ol','octan-1-ol'] },
+  { label:'Carboxylic acids', keys:['methanoic acid','ethanoic acid','propanoic acid','butanoic acid','pentanoic acid','hexanoic acid','heptanoic acid','octanoic acid'] },
+  { label:'Aldehydes, ketones & esters', keys:['ethanal','propanone','methyl ethanoate'] },
+  { label:'Aromatic (benzene ring)', keys:['benzene','toluene','phenol','ortho-xylene','meta-xylene','para-xylene'] },
+  { label:'Halogens & amines', keys:['chloromethane','methylamine'] }
+];
+function presetLabel(name){ return name.charAt(0).toUpperCase()+name.slice(1); }
+function loadPreset(name){
+  snapshot();
+  PRESETS[name]();
+  render();
+}
+
+// ---------------- rendering ----------------
+function formula(){
+  // Hill system: carbon first, then hydrogen, then every other element alphabetically —
+  // the standard convention for writing an organic molecular formula.
+  const counts={};
+  Object.values(mol.atoms).forEach(a=> counts[a.element]=(counts[a.element]||0)+1);
+  let s='';
+  if(counts.C){ s+='C'+(counts.C>1?toSub(counts.C):''); }
+  if(counts.H){ s+='H'+(counts.H>1?toSub(counts.H):''); }
+  Object.keys(counts).sort().forEach(el=>{
+    if(el==='C' || el==='H') return;
+    s += el+(counts[el]>1?toSub(counts[el]):'');
+  });
+  return s||'—';
+}
+function toSub(n){
+  const subs='₀₁₂₃₄₅₆₇₈₉';
+  return String(n).split('').map(d=>subs[+d]).join('');
+}
+
+// ---------------- "type a formula, build the molecule" ----------------
+// Converts an atom-count map into the same plain-ASCII Hill-system string for every molecule
+// (current board state or a library preset), so the two can be compared as plain text.
+function countsToKey(counts){
+  let s='';
+  if(counts.C){ s+='C'+(counts.C>1?counts.C:''); }
+  if(counts.H){ s+='H'+(counts.H>1?counts.H:''); }
+  Object.keys(counts).sort().forEach(el=>{ if(el==='C'||el==='H') return; s+=el+(counts[el]>1?counts[el]:''); });
+  return s;
+}
+function plainFormula(){
+  const counts={};
+  Object.values(mol.atoms).forEach(a=> counts[a.element]=(counts[a.element]||0)+1);
+  return countsToKey(counts);
+}
+function prettyFormula(key){ return key.replace(/\d+/g, n=>toSub(n)); }
+// Accepts loose input ("C4H10", "c4h10", "C4H10-", "C₄H₁₀" with a trailing dash a student might
+// leave from copying a worksheet) and turns it into an element->count map, or null if nothing
+// recognisable was typed.
+function parseFormulaInput(raw){
+  let s = (raw||'').trim().replace(/[\s_]+/g,'').replace(/-+$/,'');
+  const subs='₀₁₂₃₄₅₆₇₈₉';
+  s = s.split('').map(ch=>{ const i=subs.indexOf(ch); return i>=0?String(i):ch; }).join('');
+  s = s.replace(/cl/gi,'Cl').replace(/br/gi,'Br');
+  s = s.replace(/[a-z]/g, ch=>ch.toUpperCase()).replace(/CL/g,'Cl').replace(/BR/g,'Br');
+  const re = /([A-Z][a-z]?)(\d*)/g;
+  const counts = {}; let m, matchedAny=false;
+  while((m=re.exec(s))){
+    if(!m[0]) { re.lastIndex++; continue; }
+    const el=m[1], n=m[2]?parseInt(m[2],10):1;
+    counts[el]=(counts[el]||0)+n; matchedAny=true;
+  }
+  return matchedAny ? counts : null;
+}
+// Built once at load (see bottom of file): every known formula mapped to the list of presets
+// that share it, so an unambiguous formula (CH4) can be built immediately while an ambiguous
+// one (C3H6: propene or cyclopropane) can offer the student a real choice instead of guessing.
+const FORMULA_INDEX = {};
+function buildFormulaIndex(){
+  Object.keys(PRESETS).forEach(key=>{
+    PRESETS[key]();
+    const k = plainFormula();
+    (FORMULA_INDEX[k] = FORMULA_INDEX[k]||[]).push(key);
+  });
+  freshMolecule();
+}
+function handleFormulaSearch(){
+  const input = document.getElementById('formulaInput');
+  const resultsEl = document.getElementById('formulaMatches');
+  const counts = parseFormulaInput(input.value);
+  if(!counts){
+    resultsEl.innerHTML = '<span style="color:var(--bad)">Type a molecular formula first — e.g. CH4 or C4H10.</span>';
+    return;
+  }
+  const key = countsToKey(counts);
+  const matches = FORMULA_INDEX[key];
+  if(!matches || matches.length===0){
+    resultsEl.innerHTML = `<span style="color:var(--bad)">${prettyFormula(key)} isn't in this tool's library yet — try building it by hand below, or pick a molecule from the dropdown.</span>`;
+    return;
+  }
+  if(matches.length===1){
+    loadPreset(matches[0]);
+    resultsEl.innerHTML = `<span style="color:var(--good)">${prettyFormula(key)} can only be one thing: <b>${presetLabel(matches[0])}</b> — built it below.</span>`;
+    return;
+  }
+  const list = document.createElement('div');
+  list.innerHTML = `<div style="margin-bottom:6px;">${prettyFormula(key)} could be <b>${matches.length} different molecules</b> — formula alone can't tell you which. Click one to see its structure:</div>`;
+  const row = document.createElement('div'); row.className='preset-row'; row.style.marginBottom='0';
+  matches.forEach(name=>{
+    const b=document.createElement('button');
+    b.className='pbtn'; b.textContent = presetLabel(name);
+    b.addEventListener('click', ()=>{ loadPreset(name); document.getElementById('presetSelect').value = name; });
+    row.appendChild(b);
+  });
+  list.appendChild(row);
+  resultsEl.innerHTML=''; resultsEl.appendChild(list);
+}
+
+function render(){
+  renderSvg();
+  document.getElementById('formulaReadout').textContent = 'Molecular formula: ' + formula();
+  updateToolbarState();
+}
+
+// ---------------- 3D view state ----------------
+let rotY = 0.55, rotX = -0.35; // yaw (around vertical axis) and pitch, in radians
+const CAM_DIST = 900; // perspective camera distance, in the same px units as bond lengths
+
+function project(a){
+  // Centre-independent rotation: caller subtracts the centroid before calling.
+  const x=a.x, y=a.y, z=a.z||0;
+  // yaw: spins the flat backbone plane (which starts at z=0) around the vertical axis,
+  // swapping x and z — this is what reveals depth as the molecule turns.
+  const x1 = x*Math.cos(rotY) + z*Math.sin(rotY);
+  const z1 = -x*Math.sin(rotY) + z*Math.cos(rotY);
+  // pitch: tilts up/down.
+  const y2 = y*Math.cos(rotX) - z1*Math.sin(rotX);
+  const z2 = y*Math.sin(rotX) + z1*Math.cos(rotX);
+  const scale = CAM_DIST/(CAM_DIST - z2);
+  return { sx: x1*scale, sy: y2*scale, depth: z2, scale };
+}
+
+function renderSvg(){
+  // Whenever the selection has actually moved (a fresh click, or growing a new tip) the
+  // marker reappears on the new atom; markerHidden otherwise stays as the user last toggled it.
+  if(selectedId !== markerTrackedId){ markerHidden = false; markerTrackedId = selectedId; }
+  const svg = document.getElementById('boardSvg');
+  svg.innerHTML='';
+  const ids = Object.keys(mol.atoms).map(Number);
+  if(ids.length===0){ svg.setAttribute('viewBox','0 0 500 380'); return; }
+
+  // Centre the molecule on its own centroid before rotating, so it spins in place.
+  const cx0 = ids.reduce((s,id)=>s+mol.atoms[id].x,0)/ids.length;
+  const cy0 = ids.reduce((s,id)=>s+mol.atoms[id].y,0)/ids.length;
+  const cz0 = ids.reduce((s,id)=>s+(mol.atoms[id].z||0),0)/ids.length;
+  const proj = {};
+  ids.forEach(id=>{
+    const a = mol.atoms[id];
+    proj[id] = project({x:a.x-cx0, y:a.y-cy0, z:(a.z||0)-cz0});
+  });
+
+  const showMeasure = document.getElementById('showMeasureChk').checked;
+
+  // Build a single depth-sorted draw list (bonds + atoms + labels) so nearer parts of the
+  // molecule correctly overlap farther ones as it rotates.
+  const drawItems = [];
+
+  // Aromatic delocalisation circle(s): every ring in mol.aromaticRings is flat (z=0) and
+  // rigid, so its plane and centre in model space are known — sample points around a circle
+  // in that plane and project each one individually (like an atom) so the circle keeps its
+  // correct elliptical outline as the molecule rotates.
+  (mol.aromaticRings||[]).forEach(ringIds=>{
+    const rcx = ringIds.reduce((s,id)=>s+mol.atoms[id].x,0)/ringIds.length;
+    const rcy = ringIds.reduce((s,id)=>s+mol.atoms[id].y,0)/ringIds.length;
+    const ringR = Math.hypot(mol.atoms[ringIds[0]].x-rcx, mol.atoms[ringIds[0]].y-rcy);
+    const r = ringR * 0.6;
+    const N = 40;
+    const pts = [];
+    let depthSum = 0;
+    for(let i=0;i<N;i++){
+      const ang = (i/N)*2*Math.PI;
+      const p = project({x:rcx+r*Math.cos(ang)-cx0, y:rcy+r*Math.sin(ang)-cy0, z:0-cz0});
+      pts.push(p); depthSum += p.depth;
+    }
+    const avgDepth = depthSum/N;
+    const color = renderStyle==='wire' ? elementWireColor('C') : (isDarkBg() ? '#9fc1ff' : '#3457a0');
+    drawItems.push({ depth: avgDepth, draw(){
+      const d = 'M ' + pts.map(p=>`${p.sx.toFixed(1)},${p.sy.toFixed(1)}`).join(' L ') + ' Z';
+      svg.appendChild(svgEl('path',{d, fill:'none', stroke:color, 'stroke-width':(1.8*pts[0].scale).toFixed(2), opacity:0.75, 'pointer-events':'none'}));
+    }});
+  });
+
+  mol.bonds.forEach(b=>{
+    const A=proj[b.a], B=proj[b.b];
+    const avgScale = (A.scale+B.scale)/2;
+    const dx=B.sx-A.sx, dy=B.sy-A.sy, len=Math.hypot(dx,dy)||1;
+    const ux=dx/len, uy=dy/len, px=-uy, py=ux;
+    const offsets = b.order===2?[-3.2,3.2] : b.order===3?[-5,0,5] : [0]; // single (1) and aromatic (1.5) both draw as one line
+    const depth = (A.depth+B.depth)/2;
+    const Ae0=mol.atoms[b.a], Be0=mol.atoms[b.b];
+    const isWire = renderStyle==='wire';
+    const strokeW = (isWire ? 1.6 : 2.4)*avgScale;
+    drawItems.push({ depth, draw(){
+      offsets.forEach(off=>{
+        const o = off*avgScale;
+        const x1=A.sx+px*o, y1=A.sy+py*o, x2=B.sx+px*o, y2=B.sy+py*o;
+        // Bonds are drawn on top of atoms whenever they're nearer the camera (correct for
+        // occlusion), but they must never intercept clicks meant for the atom underneath —
+        // only atoms are selectable, so every bond line is pointer-events:none.
+        if(isWire && Ae0.element!==Be0.element){
+          // Two-tone wireframe: each half of the bond is coloured like the atom it touches.
+          const mx=(x1+x2)/2, my=(y1+y2)/2;
+          svg.appendChild(svgEl('line',{x1,y1,x2:mx,y2:my,stroke:elementWireColor(Ae0.element),'stroke-width':strokeW.toFixed(2),'stroke-linecap':'round','pointer-events':'none'}));
+          svg.appendChild(svgEl('line',{x1:mx,y1:my,x2,y2,stroke:elementWireColor(Be0.element),'stroke-width':strokeW.toFixed(2),'stroke-linecap':'round','pointer-events':'none'}));
+        } else {
+          svg.appendChild(svgEl('line',{
+            x1,y1,x2,y2,
+            stroke: isWire ? elementWireColor(Ae0.element) : (isDarkBg() ? '#d8d6cc' : '#55534c'),'stroke-width':strokeW.toFixed(2),'stroke-linecap':'round','pointer-events':'none'
+          }));
+        }
+      });
+      const Ae=mol.atoms[b.a], Be=mol.atoms[b.b];
+      if(showMeasure && Ae.element!=='H' && Be.element!=='H'){
+        const pm = Math.round(bondLenPxToPm(Ae.element,Be.element,b.order));
+        const mx=(A.sx+B.sx)/2 + px*12*avgScale, my=(A.sy+B.sy)/2 + py*12*avgScale;
+        svg.appendChild(svgEl('text',{x:mx,y:my,'font-size':(10*avgScale).toFixed(1),fill:isDarkBg()?'#9fc1ff':'#3457a0','text-anchor':'middle','font-family':'inherit','pointer-events':'none'})).textContent = pm+' pm';
+      }
+    }});
+  });
+
+  // angle labels at heavy-heavy-heavy vertices (computed from the true 3D geometry)
+  if(showMeasure){
+    ids.forEach(id=>{
+      const a = mol.atoms[id];
+      if(a.element==='H') return;
+      const hn = heavyNeighbors(id);
+      if(hn.length!==2) return;
+      const diff = angle3(hn[0].id, id, hn[1].id);
+      const a1 = angleTo(id, hn[0].id), a2 = angleTo(id, hn[1].id);
+      const bisect = norm((a1+a2)/2 + (Math.abs(a1-a2)>180?180:0));
+      const P = proj[id];
+      const lx = P.sx + 26*P.scale*Math.cos(rad(bisect))*-1, ly = P.sy + 26*P.scale*Math.sin(rad(bisect))*-1;
+      drawItems.push({ depth:P.depth+0.01, draw(){
+        svg.appendChild(svgEl('text',{x:lx,y:ly,'font-size':(10.5*P.scale).toFixed(1),fill:isDarkBg()?'#ffcf6e':'#8a5a00','text-anchor':'middle','font-family':'inherit','font-weight':'700','pointer-events':'none'})).textContent = diff.toFixed(1).replace('.0','')+'°';
+      }});
+    });
+  }
+
+  // atoms
+  const isWireAtoms = renderStyle==='wire';
+  ids.forEach(id=>{
+    const a = mol.atoms[id];
+    const P = proj[id];
+    const isH = a.element==='H';
+    const r = (isH?9:17)*P.scale;
+    drawItems.push({ depth:P.depth, draw(){
+      if(isWireAtoms){
+        // No filled ball: just an (invisible) click target sized like the old ball, so
+        // clicking to pick an atom still works without drawing a highlight ring.
+        const hit = svgEl('circle',{cx:P.sx,cy:P.sy,r, fill:'transparent', stroke:'none', cursor: isH?'default':'pointer'});
+        // Selection is handled entirely by the tap-detection in the pointerup handler below
+        // (a native 'click' listener here would double-fire alongside it, since pointer
+        // capture on the SVG can still let the synthetic click reach this element too).
+        if(!isH) hit.dataset.atomId = id;
+        svg.appendChild(hit);
+        const t = svgEl('text',{x:P.sx,y:P.sy+(isH?3.5:4.5)*P.scale,'font-size':(isH?11:14)*P.scale,fill:elementWireColor(a.element),'text-anchor':'middle','font-family':'inherit','font-weight':'700'});
+        t.textContent = a.element; t.style.pointerEvents='none';
+        svg.appendChild(t);
+      } else {
+        const c = svgEl('circle',{cx:P.sx,cy:P.sy,r, fill:elementColor(a.element), stroke:'#fff', 'stroke-width':1.4, cursor: isH?'default':'pointer'});
+        if(!isH) c.dataset.atomId = id;
+        svg.appendChild(c);
+        const t = svgEl('text',{x:P.sx,y:P.sy+(isH?3.5:4.5)*P.scale,'font-size':(isH?9:12.5)*P.scale,fill:elementText(isH?'H':a.element),'text-anchor':'middle','font-family':'inherit','font-weight':'700'});
+        t.textContent = a.element; t.style.pointerEvents='none';
+        svg.appendChild(t);
+      }
+    }});
+    // "growing point" marker: a dashed amber ring + small arrow label floating just outside
+    // the currently-selected atom, so it reads as a deliberate UI marker (not a stray
+    // rendering glitch) and clearly shows the one atom new groups will attach to.
+    if(!isH && id===selectedId && !markerHidden){
+      const markerR = r + 7*P.scale;
+      const ringColor = isDarkBg() ? '#ffcf6e' : '#b8860b';
+      drawItems.push({ depth:P.depth+0.05, draw(){
+        svg.appendChild(svgEl('circle',{cx:P.sx,cy:P.sy,r:markerR, fill:'none', stroke:ringColor,'stroke-width':(2.2*P.scale).toFixed(2),'stroke-dasharray':`${(4*P.scale).toFixed(1)} ${(3*P.scale).toFixed(1)}`,'pointer-events':'none'}));
+        const lx = P.sx, ly = P.sy - markerR - 9*P.scale;
+        const lbl = svgEl('text',{x:lx,y:ly,'font-size':(10.5*P.scale).toFixed(1),fill:ringColor,'text-anchor':'middle','font-family':'inherit','font-weight':'700'});
+        lbl.textContent = 'growing from here'; lbl.style.pointerEvents='none';
+        svg.appendChild(lbl);
+      }});
+    }
+  });
+
+  drawItems.sort((p,q)=>p.depth-q.depth);
+  drawItems.forEach(item=>item.draw());
+
+  // Fit the viewBox to the projected (rotated) extent, so nothing gets clipped as it spins.
+  const allSx = ids.map(id=>proj[id].sx), allSy = ids.map(id=>proj[id].sy);
+  const pad=55;
+  const minX=Math.min(...allSx)-pad, maxX=Math.max(...allSx)+pad;
+  const minY=Math.min(...allSy)-pad, maxY=Math.max(...allSy)+pad;
+  const w=Math.max(260,maxX-minX), h=Math.max(220,maxY-minY);
+  svg.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+}
+function bondLenPxToPm(elA,elB,order){
+  const key=[elA,elB].sort().join('-');
+  const table = BOND_LEN_PM[key];
+  return (table && table[order]) || 150;
+}
+
+function updateToolbarState(){
+  const hasSel = selectedId!==null && mol.atoms[selectedId];
+  const rem = hasSel ? remainingHeavyValence(selectedId) : (Object.keys(mol.atoms).length===0 ? 99 : 0);
+  const order = parseInt(document.querySelector('.order-btn.active').dataset.order,10);
+  // A new heavy atom can only be attached if the SELECTED atom has room for this bond order,
+  // AND the new element itself can actually form a bond of this order (a halogen, valence 1,
+  // can never take a double or triple bond).
+  const heavyDisabled = el => hasSel ? (rem<order || VALENCE[el]<order) : VALENCE[el]<order;
+  document.getElementById('addCBtn').disabled = hasSel ? rem<order : false;
+  document.getElementById('addOBtn').disabled = heavyDisabled('O');
+  document.getElementById('addNBtn').disabled = heavyDisabled('N');
+  document.getElementById('addFBtn').disabled = heavyDisabled('F');
+  document.getElementById('addClBtn').disabled = heavyDisabled('Cl');
+  document.getElementById('addBrBtn').disabled = heavyDisabled('Br');
+  document.getElementById('addIBtn').disabled = heavyDisabled('I');
+  document.getElementById('addOHBtn').disabled = !hasSel || rem<1;
+  document.getElementById('addKetoneBtn').disabled = !hasSel || rem<2 || mol.atoms[selectedId]?.element!=='C';
+  document.getElementById('addCHOBtn').disabled = !hasSel || rem<1 || mol.atoms[selectedId]?.element!=='C';
+  document.getElementById('addCOOHBtn').disabled = !hasSel || rem<1 || mol.atoms[selectedId]?.element!=='C';
+  document.getElementById('esterifyBtn').disabled = !esterOHCandidate();
+  document.getElementById('closeRingBtn').disabled = !canCloseRing();
+  document.getElementById('undoBtn').disabled = history.length===0;
+
+  const side = document.getElementById('boardSide');
+  if(!hasSel && Object.keys(mol.atoms).length===0){
+    side.innerHTML = 'Pick a molecule from the dropdown, type a formula above, or open &ldquo;Build atom-by-atom&rdquo; below and press <b>+ Carbon</b> to start from scratch.';
+  } else if(hasSel){
+    const a = mol.atoms[selectedId];
+    side.innerHTML = `Selected atom: <b>${a.element}</b> (id ${selectedId}) &mdash; ${rem} free bond${rem===1?'':'s'} remaining (not counting hydrogens, which refill automatically).<br><br>Click any carbon, oxygen, nitrogen or halogen already on the board (including round a benzene ring) to attach your next group there instead of the current tip.`;
+  }
+}
+
+// ---------------- UI wiring ----------------
+document.querySelectorAll('.order-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.order-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    updateToolbarState();
+  });
+});
+function currentOrder(){ return parseInt(document.querySelector('.order-btn.active').dataset.order,10); }
+document.getElementById('addCBtn').addEventListener('click', ()=> actionAddHeavy('C', currentOrder()));
+document.getElementById('addOBtn').addEventListener('click', ()=> actionAddHeavy('O', currentOrder()));
+document.getElementById('addNBtn').addEventListener('click', ()=> actionAddHeavy('N', currentOrder()));
+document.getElementById('addFBtn').addEventListener('click', ()=> actionAddHeavy('F', 1));
+document.getElementById('addClBtn').addEventListener('click', ()=> actionAddHeavy('Cl', 1));
+document.getElementById('addBrBtn').addEventListener('click', ()=> actionAddHeavy('Br', 1));
+document.getElementById('addIBtn').addEventListener('click', ()=> actionAddHeavy('I', 1));
+document.getElementById('addOHBtn').addEventListener('click', actionAddOH);
+document.getElementById('addKetoneBtn').addEventListener('click', actionAddKetone);
+document.getElementById('addCHOBtn').addEventListener('click', actionAddCHO);
+document.getElementById('addCOOHBtn').addEventListener('click', actionAddCOOH);
+document.getElementById('esterifyBtn').addEventListener('click', actionEsterify);
+document.getElementById('closeRingBtn').addEventListener('click', actionCloseRing);
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('clearBtn').addEventListener('click', actionClear);
+document.getElementById('showMeasureChk').addEventListener('change', renderSvg);
+
+// ---------------- 3D interaction: drag-to-rotate, auto-rotate, reset, save picture ----------------
+const boardSvg = document.getElementById('boardSvg');
+let dragging=false, lastPX=0, lastPY=0, downPX=0, downPY=0, downTarget=null, moved=false;
+const TAP_SLOP = 6; // px of movement allowed before a pointerdown+up counts as a drag, not a tap-to-select
+boardSvg.addEventListener('pointerdown', e=>{
+  dragging=true; moved=false;
+  lastPX=e.clientX; lastPY=e.clientY; downPX=e.clientX; downPY=e.clientY;
+  // A hydrogen can legitimately render in front of its own carbon at some rotation angles
+  // (genuine 3D occlusion), and a hydrogen circle carries no data-atom-id, so e.target alone
+  // can land on an unselectable H even though a selectable atom sits at the same pixel right
+  // behind it. Walk the whole stack of elements under the pointer and pick the first one
+  // (front-to-back) that actually is an atom, so taps on a carbon still work hidden by its own H.
+  const stack = document.elementsFromPoint(e.clientX, e.clientY);
+  downTarget = stack.find(el => el.dataset && el.dataset.atomId!==undefined) || null;
+  boardSvg.setPointerCapture(e.pointerId);
+});
+boardSvg.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lastPX, dy=e.clientY-lastPY;
+  lastPX=e.clientX; lastPY=e.clientY;
+  if(Math.abs(e.clientX-downPX)>TAP_SLOP || Math.abs(e.clientY-downPY)>TAP_SLOP) moved=true;
+  rotY = norm(rotY*180/Math.PI + dx*0.5)*Math.PI/180;
+  rotX = Math.max(-1.4, Math.min(1.4, rotX + dy*0.012));
+  renderSvg();
+});
+function stopDrag(e){
+  dragging=false;
+  // setPointerCapture retargets pointerup (and the native click that would follow it) to
+  // boardSvg itself, so a plain click listener on an atom circle never fires. Instead, treat
+  // a pointerdown+pointerup that barely moved as a tap: select whichever atom was found under
+  // the ORIGINAL pointerdown position (see the elementsFromPoint lookup above).
+  if(e && !moved && downTarget){
+    selectAtom(parseInt(downTarget.dataset.atomId,10));
+  }
+  downTarget=null;
+}
+boardSvg.addEventListener('pointerup', stopDrag);
+boardSvg.addEventListener('pointercancel', ()=>{ dragging=false; downTarget=null; });
+boardSvg.addEventListener('pointerleave', ()=>{ if(!autoRotate){ dragging=false; downTarget=null; } });
+
+let autoRotate=false, autoRafId=null;
+function autoStep(){
+  if(!dragging){ rotY += 0.012; renderSvg(); }
+  if(autoRotate) autoRafId = requestAnimationFrame(autoStep);
+}
+document.getElementById('autoRotateChk').addEventListener('change', e=>{
+  autoRotate = e.target.checked;
+  if(autoRotate && autoRafId===null) autoRafId = requestAnimationFrame(autoStep);
+  if(!autoRotate && autoRafId!==null){ cancelAnimationFrame(autoRafId); autoRafId=null; }
+});
+document.getElementById('resetViewBtn').addEventListener('click', ()=>{
+  rotY = 0.55; rotX = -0.35; renderSvg();
+});
+document.getElementById('styleSelect').addEventListener('change', e=>{
+  renderStyle = e.target.value;
+  renderSvg();
+});
+
+function applyBackground(){
+  boardSvg.style.background = BG_COLORS[bgMode];
+}
+document.getElementById('bgSelect').addEventListener('change', e=>{
+  bgMode = e.target.value;
+  applyBackground();
+  renderSvg(); // re-render so dark-background colour swaps (bonds, carbon fill, labels) take effect
+});
+applyBackground();
+
+document.getElementById('saveImgBtn').addEventListener('click', ()=>{
+  const svg = document.getElementById('boardSvg');
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const vb = svg.viewBox.baseVal;
+  const w = vb && vb.width ? vb.width : 500, h = vb && vb.height ? vb.height : 380;
+  clone.setAttribute('width', w); clone.setAttribute('height', h);
+  // background rect (matching the board's current background colour) so the PNG isn't transparent
+  const bgRect = svgEl('rect',{x:vb?vb.x:0, y:vb?vb.y:0, width:w, height:h, fill:BG_COLORS[bgMode]});
+  clone.insertBefore(bgRect, clone.firstChild);
+  const svgStr = new XMLSerializer().serializeToString(clone);
+  const svg64 = btoa(unescape(encodeURIComponent(svgStr)));
+  const image64 = 'data:image/svg+xml;base64,'+svg64;
+  const img = new Image();
+  img.onload = ()=>{
+    const upscale = 3;
+    const canvas = document.createElement('canvas');
+    canvas.width = w*upscale; canvas.height = h*upscale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = BG_COLORS[bgMode]; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    const fname = plainFormula().replace(/[^A-Za-z0-9]/g,'');
+    a.download = 'my-molecule-' + (fname||'drawing') + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  img.src = image64;
+});
+
+const presetSelect = document.getElementById('presetSelect');
+PRESET_GROUPS.forEach(group=>{
+  const og = document.createElement('optgroup');
+  og.label = group.label;
+  group.keys.forEach(name=>{
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = presetLabel(name);
+    og.appendChild(opt);
+  });
+  presetSelect.appendChild(og);
+});
+presetSelect.addEventListener('change', e=>{
+  document.getElementById('formulaMatches').innerHTML='';
+  loadPreset(e.target.value);
+});
+
+document.getElementById('formulaBuildBtn').addEventListener('click', handleFormulaSearch);
+document.getElementById('formulaInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') handleFormulaSearch();
+});
+
+freshMolecule();
+buildFormulaIndex();
+loadPreset('ethanol');
+presetSelect.value = 'ethanol';
+
+// ---------------- quizzes ----------------
+function buildMcqSet(list, holder){
+  list.forEach((m,i)=>{
+    const div = document.createElement('div');
+    div.style.marginBottom='16px';
+    div.innerHTML = `<p style="font-size:13.5px;font-weight:600;margin-bottom:6px;">${i+1}. ${m.q}</p><div class="opt-row"></div><div class="mcq-explain"></div>`;
+    const row = div.querySelector('.opt-row');
+    m.opts.forEach((opt,idx)=>{
+      const b = document.createElement('button');
+      b.className='opt-btn'; b.type='button'; b.textContent=opt;
+      b.addEventListener('click', ()=>{
+        if(b.disabled) return;
+        Array.from(row.children).forEach(x=>x.disabled=true);
+        if(idx===m.correct) b.classList.add('correct');
+        else { b.classList.add('wrong'); row.children[m.correct].classList.add('reveal-correct'); }
+        const ex = div.querySelector('.mcq-explain');
+        ex.classList.add('show'); ex.textContent = m.explain;
+      });
+      row.appendChild(b);
+    });
+    holder.appendChild(div);
+  });
+}
+const BUILD_MCQS = [
+  { q:'You add a double bond between two carbons instead of a single bond. What happens to the bond length?', opts:['It gets shorter','It gets longer','It stays exactly the same'], correct:0,
+    explain:'More shared electron pairs pull the two nuclei closer together — a C=C double bond (134 pm) is shorter than a C-C single bond (154 pm), and a C≡C triple bond (120 pm) is shorter still.' },
+  { q:'Build ethene (C₂H₄) on the board above and turn on "show bond lengths & angles". What angle do you see at each carbon?', opts:['120°','109.5°','180°'], correct:0,
+    explain:'Each carbon in a C=C double bond is sp² and trigonal planar, giving 120° angles — wider than the 109.5° you see in an all-single-bonded chain like propane.' }
+];
+buildMcqSet(BUILD_MCQS, document.getElementById('buildMcqHolder'));
+
+const MIXED_MCQS = [
+  { q:'Which of these three bonds is the shortest?', opts:['C≡C (triple)','C=C (double)','C−C (single)'], correct:0, explain:'More shared pairs = a stronger pull between nuclei = a shorter bond. Triple < double < single.' },
+  { q:'What is the approximate H–C–H bond angle in methane, CH₄?', opts:['109.5°','120°','90°'], correct:0, explain:'Methane’s carbon is sp³ with four single bonds arranged tetrahedrally, giving the classic 109.5° angle.' },
+  { q:'A functional group with the structure −COOH is a...', opts:['carboxylic acid','alcohol','ketone'], correct:0, explain:'−COOH (a carbon double-bonded to one oxygen and single-bonded to an −OH) is the carboxylic acid group, as in ethanoic acid, CH₃COOH.' },
+  { q:'Which functional group turns up in the middle of a carbon chain, not at the end?', opts:['Ketone (C=O)', 'Aldehyde (−CHO)', 'Carboxylic acid (−COOH)'], correct:0, explain:'A ketone’s carbonyl carbon is bonded to two other carbons plus the =O, so it has to sit inside the chain — aldehydes and carboxylic acids both need a free end.' },
+  { q:'What turns a carboxylic acid into an ester on this board?', opts:['Replacing the −OH’s hydrogen with a new carbon chain', 'Removing the C=O oxygen entirely', 'Adding another −COOH group'], correct:0, explain:'An ester, −COO−R, is a carboxylic acid with the acidic hydrogen swapped for an alkyl group — exactly what the "Esterify" button does.' },
+  { q:'Build cyclohexane and rotate it. Why does it pucker into a zigzag "chair" instead of sitting flat?', opts:['A flat hexagon’s corners are 120°, too wide for a single-bonded (sp³) carbon, which "wants" close to 109.5° — puckering relieves that strain', 'Cyclohexane doesn’t actually contain any carbon', 'Flat rings can only ever have 5 carbons'], correct:0, explain:'A flat hexagon’s internal angle is 120°, closer to an alkene’s angle than to the ~109.5° a single-bonded carbon "wants" — so real cyclohexane folds into this puckered chair shape to bring its angles down to around 111°.' },
+  { q:'Build benzene. Unlike cyclohexane, why does its ring stay perfectly flat?', opts:['Each ring carbon is sp² (like an alkene carbon), and three mutually-120° bonds always lie in one plane', 'Benzene has no hydrogens to get in the way', 'The ring is too small to pucker'], correct:0, explain:'Every benzene carbon has three groups around it (two ring bonds + one H or substituent) at 120° — exactly like an alkene’s sp² carbon — and a trigonal-planar arrangement is always flat, unlike the tetrahedral (109.5°) sp³ carbons in cyclohexane.' },
+  { q:'Why is every C−C bond in benzene exactly the same length (139 pm), instead of alternating single (154 pm) and double (134 pm) bonds?', opts:['The ring’s extra electrons are delocalised — spread evenly around all six carbons — rather than fixed into three separate double bonds', 'Benzene doesn’t really have six carbons', 'Real benzene has no bonds at all, just floating atoms'], correct:0, explain:'This is why benzene is drawn with a circle inside the hexagon here: the "extra" electrons from what would be three C=C double bonds are shared equally around the whole ring, making every bond identical and intermediate in length between a single and a double bond.' },
+  { q:'Toluene, phenol and xylene are all benzene with something attached. What turns benzene (C₆H₆) into phenol?', opts:['Swapping one ring hydrogen for an −OH group', 'Swapping one ring hydrogen for a −CH₃ group', 'Adding a second full benzene ring'], correct:0, explain:'Phenol is C₆H₅OH — a benzene ring with one hydrogen replaced by −OH. Toluene (methylbenzene) is the −CH₃ version, and xylene has two −CH₃ groups, at different ring positions depending on whether it’s ortho-, meta- or para-xylene.' }
+];
+buildMcqSet(MIXED_MCQS, document.getElementById('mixedMcqHolder'));
+</script>
+</body>
+</html>
