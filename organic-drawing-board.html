@@ -145,11 +145,30 @@
         <button class="tbtn" id="saveImgBtn">&#128190; Save picture</button>
       </div>
     </div>
+    <div class="toolbar">
+      <div class="tool-group">
+        <span class="tool-label">Move:</span>
+        <button class="tbtn" id="panLeftBtn" title="Move left">&#8592;</button>
+        <button class="tbtn" id="panRightBtn" title="Move right">&#8594;</button>
+        <button class="tbtn" id="panUpBtn" title="Move up">&#8593;</button>
+        <button class="tbtn" id="panDownBtn" title="Move down">&#8595;</button>
+      </div>
+      <div class="tool-group">
+        <span class="tool-label">Rotate (screen):</span>
+        <button class="tbtn" id="rollLeftBtn" title="Rotate left">&#8634;</button>
+        <button class="tbtn" id="rollRightBtn" title="Rotate right">&#8635;</button>
+      </div>
+      <div class="tool-group">
+        <span class="tool-label">Zoom:</span>
+        <button class="tbtn" id="zoomOutBtn" title="Zoom out">&minus;</button>
+        <button class="tbtn" id="zoomInBtn" title="Zoom in">+</button>
+      </div>
+    </div>
 
     <div class="board-row">
       <div class="board-box">
         <svg id="boardSvg" class="board-svg" viewBox="0 0 500 380" height="380"></svg>
-        <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px;">&#8226; drag the molecule to rotate it in 3D &#8226; click any atom to grow a bond from there &#8226;</div>
+        <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px;">&#8226; drag the molecule to rotate it in 3D &#8226; click any atom to grow a bond from there &#8226; scroll to zoom &#8226;</div>
         <div class="legend-row">
           <div class="legend-item"><span class="legend-dot" style="background:#4a4a48"></span>carbon</div>
           <div class="legend-item"><span class="legend-dot" style="background:#c4453b"></span>oxygen</div>
@@ -169,6 +188,13 @@
         </details>
         <div class="build-toolbox">
           <div class="tool-label" style="margin-bottom:2px;">Build atom-by-atom:</div>
+          <div class="toolbar">
+            <div class="tool-group">
+              <button class="tbtn" id="closeRingBtn">&#8635; Close ring</button>
+              <button class="tbtn" id="undoBtn">&#8630; Undo last</button>
+              <button class="tbtn danger" id="clearBtn">&times; New molecule</button>
+            </div>
+          </div>
           <div class="toolbar">
             <div class="tool-group">
               <span class="tool-label">Next bond:</span>
@@ -201,13 +227,6 @@
               <button class="tbtn" id="addCHOBtn">&minus;CHO (aldehyde)</button>
               <button class="tbtn" id="addCOOHBtn">&minus;COOH (acid)</button>
               <button class="tbtn" id="esterifyBtn">Esterify &rarr; ester</button>
-            </div>
-          </div>
-          <div class="toolbar">
-            <div class="tool-group">
-              <button class="tbtn" id="closeRingBtn">&#8635; Close ring</button>
-              <button class="tbtn" id="undoBtn">&#8630; Undo last</button>
-              <button class="tbtn danger" id="clearBtn">&times; New molecule</button>
             </div>
           </div>
           <div class="toolbar">
@@ -889,6 +908,9 @@ function render(){
 
 // ---------------- 3D view state ----------------
 let rotY = 0.55, rotX = -0.35; // yaw (around vertical axis) and pitch, in radians
+let rotZ = 0; // roll: rotation in the screen plane (around the viewing axis)
+let panX = 0, panY = 0; // translation of the molecule on screen, in the same px units as bond lengths
+let zoomLevel = 1; // 1 = fit-to-view; >1 zooms in, <1 zooms out
 const CAM_DIST = 900; // perspective camera distance, in the same px units as bond lengths
 
 function project(a){
@@ -902,7 +924,14 @@ function project(a){
   const y2 = y*Math.cos(rotX) - z1*Math.sin(rotX);
   const z2 = y*Math.sin(rotX) + z1*Math.cos(rotX);
   const scale = CAM_DIST/(CAM_DIST - z2);
-  return { sx: x1*scale, sy: y2*scale, depth: z2, scale };
+  const sx0 = x1*scale, sy0 = y2*scale;
+  // roll: rotate the already-projected (flat, 2D) point in the screen plane. This spins the
+  // picture the way turning a photo would — it never changes depth, so it doesn't affect
+  // which atoms draw in front of which.
+  const cz = Math.cos(rotZ), sz = Math.sin(rotZ);
+  const sx = sx0*cz - sy0*sz;
+  const sy = sx0*sz + sy0*cz;
+  return { sx, sy, depth: z2, scale };
 }
 
 function renderSvg(){
@@ -1065,7 +1094,13 @@ function renderSvg(){
   const minX=Math.min(...allSx)-pad, maxX=Math.max(...allSx)+pad;
   const minY=Math.min(...allSy)-pad, maxY=Math.max(...allSy)+pad;
   const w=Math.max(260,maxX-minX), h=Math.max(220,maxY-minY);
-  svg.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+  // Pan and zoom are applied on top of that natural fit: pan shifts the window's centre
+  // (so the molecule appears to slide), zoom shrinks/grows the window around that same
+  // centre (so the molecule appears to grow/shrink) — the fit itself is recalculated every
+  // frame from the molecule's true extent, so panning/zooming never clips a rotating atom.
+  const fitCx = (minX+maxX)/2 - panX, fitCy = (minY+maxY)/2 - panY;
+  const vw = w/zoomLevel, vh = h/zoomLevel;
+  svg.setAttribute('viewBox', `${fitCx-vw/2} ${fitCy-vh/2} ${vw} ${vh}`);
 }
 function bondLenPxToPm(elA,elB,order){
   const key=[elA,elB].sort().join('-');
@@ -1182,8 +1217,27 @@ document.getElementById('autoRotateChk').addEventListener('change', e=>{
   if(!autoRotate && autoRafId!==null){ cancelAnimationFrame(autoRafId); autoRafId=null; }
 });
 document.getElementById('resetViewBtn').addEventListener('click', ()=>{
-  rotY = 0.55; rotX = -0.35; renderSvg();
+  rotY = 0.55; rotX = -0.35; rotZ = 0; panX = 0; panY = 0; zoomLevel = 1; renderSvg();
 });
+
+// ---------------- Move / rotate-in-plane / zoom controls ----------------
+// Step sizes scale with the current zoom, so a "move" press always nudges the molecule by a
+// similar amount of screen space, however far in or out the view currently is.
+function panStep(){ return 35/zoomLevel; }
+document.getElementById('panLeftBtn').addEventListener('click', ()=>{ panX -= panStep(); renderSvg(); });
+document.getElementById('panRightBtn').addEventListener('click', ()=>{ panX += panStep(); renderSvg(); });
+document.getElementById('panUpBtn').addEventListener('click', ()=>{ panY -= panStep(); renderSvg(); });
+document.getElementById('panDownBtn').addEventListener('click', ()=>{ panY += panStep(); renderSvg(); });
+document.getElementById('rollLeftBtn').addEventListener('click', ()=>{ rotZ -= 15*Math.PI/180; renderSvg(); });
+document.getElementById('rollRightBtn').addEventListener('click', ()=>{ rotZ += 15*Math.PI/180; renderSvg(); });
+const ZOOM_MIN = 0.4, ZOOM_MAX = 4;
+document.getElementById('zoomInBtn').addEventListener('click', ()=>{ zoomLevel = Math.min(ZOOM_MAX, zoomLevel*1.2); renderSvg(); });
+document.getElementById('zoomOutBtn').addEventListener('click', ()=>{ zoomLevel = Math.max(ZOOM_MIN, zoomLevel/1.2); renderSvg(); });
+boardSvg.addEventListener('wheel', e=>{
+  e.preventDefault();
+  zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel * (e.deltaY<0 ? 1.1 : 1/1.1)));
+  renderSvg();
+}, { passive:false });
 document.getElementById('styleSelect').addEventListener('change', e=>{
   renderStyle = e.target.value;
   renderSvg();
