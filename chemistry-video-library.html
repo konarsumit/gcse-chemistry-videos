@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chemistry Video Library — GCSE/National 5 and A-level/Advanced Higher</title>
+<title>Chemistry Video Library — GCSE/National 5, A-level/Advanced Higher and University</title>
 <style>
   :root{
     --bg: #faf9f6;
@@ -15,6 +15,8 @@
     --accent-bg: #EAF3DE;
     --ah-accent: #3b6fa0;
     --ah-accent-bg: #E3EDF6;
+    --uni-accent: #7a4a8c;
+    --uni-accent-bg: #F1E8F5;
   }
   *{box-sizing:border-box;}
   body{
@@ -69,6 +71,7 @@
   .level-tab:hover{color:var(--text);}
   .level-tab.active[data-level="gcse"]{color:var(--accent); border-bottom-color:var(--accent);}
   .level-tab.active[data-level="ah"]{color:var(--ah-accent); border-bottom-color:var(--ah-accent);}
+  .level-tab.active[data-level="uni"]{color:var(--uni-accent); border-bottom-color:var(--uni-accent);}
 
   .search-bar{
     display:flex;
@@ -85,6 +88,7 @@
   }
   .search-bar input:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .level-panel[data-level="ah"] .search-bar input:focus{outline-color:var(--ah-accent);}
+  .level-panel[data-level="uni"] .search-bar input:focus{outline-color:var(--uni-accent);}
 
   .topic-section{
     border:1px solid var(--border);
@@ -109,6 +113,7 @@
   }
   .level-panel[data-level="gcse"] .topic-number{color:var(--accent);}
   .level-panel[data-level="ah"] .topic-number{color:var(--ah-accent);}
+  .level-panel[data-level="uni"] .topic-number{color:var(--uni-accent);}
   .topic-title{font-size:17px;font-weight:600;margin:0;}
   .topic-count{font-size:13px;color:var(--muted);font-weight:400;}
   .chevron{
@@ -144,6 +149,7 @@
   }
   .level-panel[data-level="gcse"] .video-card:hover{border-color:var(--accent);}
   .level-panel[data-level="ah"] .video-card:hover{border-color:var(--ah-accent);}
+  .level-panel[data-level="uni"] .video-card:hover{border-color:var(--uni-accent);}
   .video-card:active{transform:scale(0.98);}
   .video-name{font-size:14px;font-weight:600;}
   .video-desc{font-size:12px;color:var(--muted);line-height:1.4;}
@@ -157,6 +163,7 @@
   }
   .level-panel[data-level="gcse"] .video-tag{color:var(--accent);}
   .level-panel[data-level="ah"] .video-tag{color:var(--ah-accent);}
+  .level-panel[data-level="uni"] .video-tag{color:var(--uni-accent);}
   .video-card.placeholder{
     opacity:0.5;
     pointer-events:none;
@@ -189,12 +196,13 @@
 <div class="wrap">
   <span class="badge">Free for students and teachers</span>
   <h1>Chemistry Video Library</h1>
-  <p class="sub">Original animated explainers, built from scratch for this site &mdash; covering both GCSE/National&nbsp;5 and A-level/Advanced Higher Chemistry.</p>
+  <p class="sub">Original animated explainers, built from scratch for this site &mdash; covering GCSE/National&nbsp;5, A-level/Advanced Higher and University Chemistry.</p>
   <p class="free-note">Every animation here is hand-built and unique to this site &mdash; not sourced from textbooks, YouTube, or stock diagrams. Free to watch for any student revising Chemistry.</p>
 
   <div class="level-tabs">
     <button class="level-tab active" data-level="gcse" onclick="switchLevel('gcse')">GCSE / National 5</button>
     <button class="level-tab" data-level="ah" onclick="switchLevel('ah')">A-level / Advanced Higher</button>
+    <button class="level-tab" data-level="uni" onclick="switchLevel('uni')">University</button>
   </div>
 
   <div class="level-panel active" data-level="gcse">
@@ -211,6 +219,14 @@
     </div>
     <div id="topics-ah"></div>
     <p class="empty-state" id="emptyState-ah">No videos match your search.</p>
+  </div>
+
+  <div class="level-panel" data-level="uni">
+    <div class="search-bar">
+      <input type="text" id="searchInput-uni" placeholder="Search topics or tools, e.g. crystallography, diffraction, space group" oninput="filterVideos('uni')">
+    </div>
+    <div id="topics-uni"></div>
+    <p class="empty-state" id="emptyState-uni">No videos match your search.</p>
   </div>
 
   <footer>
@@ -379,7 +395,15 @@ const DATA = {
       ]
     }
   ]
-
+  ,
+  uni: [
+    {
+      topic: "Structure determination",
+      videos: [
+        { name: "Diffraction lab: single-crystal X-ray diffraction", desc: "Run a simulated experiment: choose the X-ray source, find the unit cell, collect and scale data, determine the space group and write the .ins and .hkl files", url: "https://konarsumit.github.io/gcse-chemistry-videos/chemistry/diffraction-lab.html" }
+      ]
+    }
+  ]
 };
 
 function renderTopics(level){
@@ -470,6 +494,7 @@ function switchLevel(level){
 
 renderTopics('gcse');
 renderTopics('ah');
+renderTopics('uni');
 </script>
 </body>
 </html>
