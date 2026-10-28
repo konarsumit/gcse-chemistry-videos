@@ -149,7 +149,7 @@ i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:
 .gstep:first-child{border-top:0}
 .gstep .gn{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:600 .8rem var(--f-mono)}
 .gstep h3{font-size:1rem;font-family:var(--f-body);font-weight:600}
-.gstep p,.gstep ul{grid-column:2;margin:0}
+.gstep>*:not(.gn):not(h3){grid-column:2;margin:0;min-width:0}
 .gstep ul{padding-left:18px;display:flex;flex-direction:column;gap:2px}
 .gstep .go{grid-column:2}
 .geo{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:16px;align-items:start}
