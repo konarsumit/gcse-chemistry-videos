@@ -145,6 +145,24 @@ details.fold.inline .foldbody{padding:6px 0 0}
 .plotcap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);min-height:1.5em}
 i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+.gstep{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 12px;padding:12px 0;border-top:1px solid var(--rule)}
+.gstep:first-child{border-top:0}
+.gstep .gn{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:600 .8rem var(--f-mono)}
+.gstep h3{font-size:1rem;font-family:var(--f-body);font-weight:600}
+.gstep p,.gstep ul{grid-column:2;margin:0}
+.gstep ul{padding-left:18px;display:flex;flex-direction:column;gap:2px}
+.gstep .go{grid-column:2}
+.geo{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.geo{grid-template-columns:minmax(0,1fr)}}
+.geo svg{width:100%;height:auto;background:var(--chip);border-radius:8px}
+.geo .col ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.modeinfo{max-width:80ch}
+.geo svg .ln{stroke:var(--ink);fill:none;stroke-width:1.6}
+.geo svg .bm{stroke:var(--accent);fill:none;stroke-width:2}
+.geo svg .df{stroke:var(--amber);fill:none;stroke-width:2}
+.geo svg .sm{fill:var(--ink);stroke:none}
+.geo svg .dt{fill:var(--c3);stroke:none;opacity:.85}
+.geo svg text{fill:var(--muted);font:10px var(--f-body)}
 </style>
 </head>
 <body>
@@ -152,9 +170,11 @@ i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:
 
 <div class="wrap">
 <header>
-  <span class="eyebrow">Single-crystal X-ray diffraction · simulated experiment</span>
+  <span class="eyebrow" id="eyebrow"></span>
   <h1>Diffraction Lab</h1>
-  <p class="sub">Run a complete single-crystal experiment on a simulated diffractometer: choose the X-ray source, find the unit cell, plan the strategy, collect and integrate frames, scale the data, determine the space group and write the SHELX .ins and .hkl files. A final step simulates powder diffraction from the same crystals. Every number comes from the physics of the simulated crystal.</p>
+  <p class="sub" id="modesub"></p>
+  <div class="row"><div class="seg" id="modeseg" role="tablist" aria-label="Choose a technique"><button data-m="sc">Single crystal</button><button data-m="pw">Powder (PXRD)</button></div></div>
+  <p class="small muted">Information is provided in good faith for general guidance and teaching only. We cannot accept responsibility for unintentional errors. Always consult your local experts, the manufacturer's manuals and your institution's approved procedures.</p>
 </header>
 <div class="layout">
   <nav class="rail" id="rail" aria-label="Experiment steps"></nav>
@@ -1241,16 +1261,6 @@ function doSG() { S.SG = XP.sgAnalysis(S.E, S.D.obs, S.M.ix.system); const best 
 function runAllFrom(i) { if (i <= 0) setupE(); if (i <= 1) doMatrix(); if (!S.M.ix) return; if (i <= 2) doStrategy(); if (i <= 3) doCollect(); if (i <= 4) doScale(); if (i <= 5) doSG(); }
 
 // ---------- page frame ----------
-function render() {
-  if (S.view.timer) { clearInterval(S.view.timer); S.view.timer = null; }
-  $('#rail').innerHTML = STEPS.map((s, i) => `<button data-i="${i}" aria-current="${i === S.step}" class="${done(i) ? 'done' : ''}"><span class="n">${done(i) && i !== S.step ? '✓' : i + 1}</span><span class="t">${s[0]}</span></button>`).join('');
-  const [title, fn] = STEPS[S.step];
-  $('#main').innerHTML = `<section class="step"><div class="stephead"><div><span class="eyebrow">Step ${S.step + 1} of ${STEPS.length}</span><h2>${title}</h2></div><div class="row"><button class="btn" id="prev" ${S.step === 0 ? 'disabled' : ''}>← Back</button><button class="btn primary" id="next" ${S.step === STEPS.length - 1 ? 'disabled' : ''}>Next step →</button></div></div>${fn()}</section>`;
-  $('#prev').onclick = () => go(S.step - 1); $('#next').onclick = () => go(S.step + 1);
-  document.querySelectorAll('details[data-k]').forEach(d => d.ontoggle = () => { if (d.open) S.view.open.add(d.dataset.k); else S.view.open.delete(d.dataset.k); });
-  (WIRE[S.step] || (() => {}))();
-}
-function go(i) { S.step = Math.max(0, Math.min(STEPS.length - 1, i)); try { localStorage.setItem('xlab-step', S.step); } catch (e) {} render(); window.scrollTo({ top: 0 }); }
 document.addEventListener('click', e => { const b = e.target.closest('#rail button'); if (b) go(+b.dataset.i); });
 const busy = (btn, fn) => { btn.disabled = true; btn.textContent = 'Working…'; setTimeout(() => { fn(); render(); }, 30); };
 const blocker = (msg, btn = '') => `<div class="blocker row"><span>${msg}</span>${btn}</div>`;
@@ -1645,7 +1655,7 @@ function attachPlot(cv, getMap, onZoom, hover) {
   cv.onpointerleave = () => hover && hover(null);
 }
 
-function powderControls() {
+function powderControls(tabs = ['pattern', 'shape', 'rings', 'phase']) {
   const P = S.P;
   return `<div class="sheet col"><div class="row">
     ${P.tab === 'phase' ? '' : `<span class="small muted">Sample</span>`}<div class="seg" id="pph" ${P.tab === 'phase' ? 'hidden' : ''}>${Object.values(PW.LIB).map(p => `<button data-ph="${p.id}" aria-pressed="${P.ph === p.id}">${p.short}</button>`).join('')}</div>
@@ -1653,12 +1663,15 @@ function powderControls() {
     <label class="small">2θ to <select id="ptmax">${[40, 70, 100, 130].map(v => `<option value="${v}" ${P.tmax === v ? 'selected' : ''}>${v}°</option>`).join('')}</select></label>
     <label class="small">Instrument <select id="pinstr">${Object.entries(PW.INSTR).map(([k, v]) => `<option value="${k}" ${P.instr === k ? 'selected' : ''}>${v.name}</option>`).join('')}</select></label>
   </div>
-  <div class="row"><div class="seg" id="ptab" role="tablist">${[['pattern', 'Pattern from the cell'], ['shape', 'Peak shape & size'], ['rings', 'Rings → pattern'], ['phase', 'Phase ID & mixtures']].map(([k, l]) => `<button data-tab="${k}" aria-pressed="${P.tab === k}">${l}</button>`).join('')}</div></div></div>`;
+  <div class="row" ${tabs.length < 2 ? 'hidden' : ''}><div class="seg" id="ptab" role="tablist">${[['pattern', 'Pattern from the cell'], ['shape', 'Peak shape & size'], ['rings', 'Rings → pattern'], ['phase', 'Phase ID & mixtures']].filter(t => tabs.includes(t[0])).map(([k, l]) => `<button data-tab="${k}" aria-pressed="${P.tab === k}">${l}</button>`).join('')}</div></div></div>`;
 }
-function s8() {
-  S.P.seen = true;
-  const P = S.P, body = { pattern: p8pattern, shape: p8shape, rings: p8rings, phase: p8phase }[P.tab]();
-  return powderControls() + body;
+function s8a() {
+  S.P.seen = true; if (S.P.tab === 'phase') S.P.tab = 'pattern';
+  return powderControls(['pattern', 'shape', 'rings']) + { pattern: p8pattern, shape: p8shape, rings: p8rings }[S.P.tab]();
+}
+function s8b() {
+  S.P.seen = true; S.P.tab = 'phase';
+  return powderControls(['phase']) + p8phase();
 }
 const plotBox = (id, h = 340, extra = '') => `<div class="plotbox"><canvas id="${id}" style="height:${h}px" aria-label="Powder pattern plot"></canvas><div class="plotcap"><span id="${id}r" class="mono small">Hover over the pattern to identify peaks; drag to zoom, double-click to zoom out.</span>${extra}</div></div>`;
 
@@ -1852,12 +1865,204 @@ function wirePowder() {
   $('#pinstr').onchange = e => { P.instr = e.target.value; P.fitRes = null; P.sm = null; render(); };
   ({ pattern: wirePattern, shape: wireShape, rings: wireRings, phase: wirePhase })[P.tab]();
 }
-STEPS.push(['Powder diffraction', s8]);
+STEPS.push(['Powder simulator: patterns', s8a]);   // index 7 (was the single powder step)
 WIRE.push(wirePowder);
-let p8resize = null; window.addEventListener('resize', () => { if (S.step !== 7) return; clearTimeout(p8resize); p8resize = setTimeout(() => render(), 200); });
+let p8resize = null; window.addEventListener('resize', () => { if (S.step !== 7 && S.step !== 14) return; clearTimeout(p8resize); p8resize = setTimeout(() => render(), 200); });
+
+
+// ================= guide steps (new) =================
+const gs = (n, title, body, goTo) => `<div class="gstep"><span class="gn">${n}</span><h3>${title}</h3>${body}${goTo !== undefined ? `<div class="go"><button class="btn" data-go="${goTo[0]}">${goTo[1]}</button></div>` : ''}</div>`;
+const gl = a => `<ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>`;
+const gp = t => `<p>${t}</p>`;
+const sheet = (h, b) => `<div class="sheet col modeinfo">${h ? `<span class="eyebrow">${h}</span>` : ''}${b}</div>`;
+
+// SC guide (index 8)
+function g_sc() {
+  return sheet('How a single-crystal measurement runs, from the vial to the .hkl file',
+    gp('This is the real workflow on a laboratory diffractometer. Steps 1–3 happen at the instrument and are not simulated; steps 4–11 are the interactive steps in this lab, so use the buttons to try them.') +
+    gs(1, 'Select a crystal', gl(['Look under a polarising microscope: a good single crystal goes dark (extinguishes) every 90° as you rotate the polariser.', 'Typical size 0.05–0.30 mm, with clean faces, no cracks, no satellite crystals or twinning lines.', 'Choose the size to suit the beam: a crystal much larger than the beam is not fully bathed, and a very small one needs a stronger source (Cu or a microfocus tube).'])) +
+    gs(2, 'Mount it', gl(['Air- or moisture-sensitive crystals: cover them in inert oil (for example a perfluoropolyether or Paratone oil) and pick them up on a micromount loop.', 'Stable crystals at room temperature can be glued to a glass fibre or placed in a thin capillary.', 'Use as little oil or glue as possible: surplus adds background scatter and hides weak spots.'])) +
+    gs(3, 'Centre and cool', gl(['Fit the loop to the goniometer head and centre the crystal in the beam with the video camera, checking at several φ angles.', 'Start the cold nitrogen stream (commonly about 100 K) before the crystal can dry or lose solvent. Ice forms if the gas is not dry.', 'Close the enclosure and check the interlocks and shutter before any exposure, and follow your local radiation rules.'])) +
+    gs(4, 'Choose the X-ray source and temperature', gp('Mo Kα for heavier elements and strongly absorbing crystals, Cu Kα for small crystals, light-atom organics and absolute structure. Lower temperature gives stronger high-angle data.'), [0, 'Open: Crystal & X-ray source']) +
+    gs(5, 'Matrix run and unit cell', gp('A few short scans give enough spots to find the unit cell and Bravais lattice. Check the cell is sensible and the spots are sharp and round, not split.'), [1, 'Open: Matrix run & unit cell']) +
+    gs(6, 'Data-collection strategy', gp('Plan the scans for the crystal system: aim for high completeness, redundancy of about 4–6, and resolution to about 0.80 Å or better. Exposure per frame is set by how strongly the crystal diffracts.'), [2, 'Open: Strategy']) +
+    gs(7, 'Collect and integrate', gp('Collect all frames. Integration converts spot intensities on the frames into a list of h, k, l and intensity values.'), [3, 'Open: Collect & integrate']) +
+    gs(8, 'Scale and absorption correction', gp('Frames are scaled to each other and corrected for absorption. Rint and Rsigma tell you how consistent equivalent reflections are.'), [4, 'Open: Scale & absorption']) +
+    gs(9, 'Space group', gp('Systematic absences and the Laue symmetry point to candidate space groups. Several can look similar, so check intensity statistics before choosing.'), [5, 'Open: Space group']) +
+    gs(10, 'Write the .ins and .hkl files', gp('The .hkl holds the reflections (h k l F² σ(F²)); the .ins holds the cell, space group and the atoms in the formula.'), [6, 'Open: .ins & .hkl files']) +
+    gs(11, 'Solve and refine', gp('Solve with SHELXT (or Olex2) to find the atoms, then refine with SHELXL. Finish with a CIF and run checkCIF before you trust the structure.')));
+}
+
+// PW 1: sample preparation (index 9)
+function g_prep() {
+  return sheet('Prepare the sample',
+    gs(1, 'Grind to a fine, even powder', gl(['Aim for particles of about 1–10 µm so enough crystallites diffract and the intensities are reliable.', 'Grind gently in an agate mortar, ideally with a little ethanol. Hard grinding can add strain, broaden peaks or even change the phase.', 'Soft or layered samples (clays, hydrates, molecular solids) need extra care: do not over-grind.'])) +
+    gs(2, 'Avoid preferred orientation', gl(['Platy or needle crystals line up in a flat holder and distort the intensities.', 'Load from the back or side of the holder instead of pressing from the top, or mix with a little amorphous filler.', 'A rotating capillary largely avoids the problem.'])) +
+    gs(3, 'Check the amount and the surface', gl(['A standard flat holder needs a gram or so. For very small amounts use a low-background plate or a capillary.', 'The surface must be flat and level with the holder rim. A raised or sunken surface shifts all the peaks (sample displacement).'])) +
+    gs(4, 'Add a standard when you need one', gl(['An internal standard such as silicon or corundum fixes the zero shift and lets you measure the amorphous fraction.', 'Use a known mass ratio and mix it in thoroughly.'])) +
+    gs(5, 'Protect sensitive samples', gl(['Air-sensitive samples: load in a glovebox into a sealed capillary or an airtight dome holder.', 'Toxic or nanosized powders: follow your local safety rules for handling and disposal.'])));
+}
+
+// PW 2: geometry (index 10)
+const GEO = {
+  plate: { name: 'Flat plate (reflection)', best: 'Routine phase ID and Rietveld on well-prepared powders with plenty of sample.',
+    pros: ['Highest intensity for a given sample amount on a laboratory instrument.', 'Fast, simple, widely available (Bragg–Brentano focusing).', 'Easy to change samples; works for bulk solids, films and pressed pellets.'],
+    cons: ['Preferred orientation is common; surface roughness and sample height errors matter.', 'Needs more sample, and the beam footprint at low angle can overspill the sample.', 'Absorption-sensitive intensities at low angle for very absorbing material.'] },
+  cap: { name: 'Capillary (Debye–Scherrer)', best: 'Small amounts, air-sensitive samples, molecular or organic materials, structure solution and in-situ gas or temperature work.',
+    pros: ['Needs only a few mg and the sample is sealed.', 'Rotation averages the orientation of the grains and reduces preferred orientation.', 'Good for strongly absorbing samples when diluted.'],
+    cons: ['Lower intensity, so longer counting.', 'Absorption in the capillary needs checking, especially with Cu radiation.', 'Packing the capillary evenly takes practice.'] },
+  trans: { name: 'Transmission (flat sample)', best: 'Thin foils, films between supports, quick screening of small amounts, soft materials that stay in a thin layer.',
+    pros: ['Little preferred orientation compared with reflection.', 'Small samples between two thin films (such as Kapton or Mylar) work well.', 'Fixed geometry, so no sample height problem.'],
+    cons: ['Sample thickness must match absorption: too thick and the beam is lost.', 'Supports add background, often a broad hump.', 'Needs a parallel or focused beam optic suited to transmission.'] }
+};
+function geoSvg(k) {
+  const src = '<rect class="sm" x="8" y="76" width="16" height="28" rx="2"/><text x="6" y="116">X-ray tube</text>';
+  if (k === 'plate') return `<svg viewBox="0 0 260 180" role="img" aria-label="Reflection geometry: beam hits a flat plate and diffracted beam leaves on the same side"><rect class="sm" x="8" y="22" width="16" height="22" rx="2"/><text x="6" y="15">X-ray tube</text><line class="bm" x1="24" y1="33" x2="124" y2="132"/><rect class="sm" x="86" y="132" width="90" height="8" rx="1"/><text x="94" y="156">flat plate</text><line class="df" x1="136" y1="132" x2="236" y2="33"/><rect class="dt" x="228" y="20" width="22" height="26" rx="2"/><text x="256" y="64" text-anchor="end">detector</text><path class="ln" d="M150 132 A 24 24 0 0 0 138 110" /><text x="150" y="112">2θ</text></svg>`;
+  if (k === 'trans') return `<svg viewBox="0 0 260 180" role="img" aria-label="Transmission geometry: beam passes through a thin flat sample"><rect class="sm" x="8" y="76" width="16" height="28" rx="2"/><text x="6" y="116">X-ray tube</text><line class="bm" x1="24" y1="90" x2="127" y2="90"/><rect class="sm" x="127" y="52" width="6" height="76" rx="1"/><text x="104" y="146">thin flat sample</text><line class="bm" x1="133" y1="90" x2="214" y2="90" stroke-dasharray="4 3"/><line class="df" x1="133" y1="90" x2="205" y2="40"/><line class="df" x1="133" y1="90" x2="205" y2="140"/><path class="ln" d="M214 30 A 110 110 0 0 1 214 150"/><rect class="dt" x="212" y="82" width="10" height="16"/><text x="206" y="170">detector</text></svg>`;
+  return `<svg viewBox="0 0 260 180" role="img" aria-label="Capillary geometry: beam passes across a thin rotating capillary"><rect class="sm" x="8" y="76" width="16" height="28" rx="2"/><text x="6" y="116">X-ray tube</text><line class="bm" x1="24" y1="90" x2="127" y2="90"/><rect class="ln" x="126" y="46" width="8" height="88" rx="4"/><rect class="sm" x="128" y="64" width="4" height="52"/><text x="92" y="146">capillary, rotating</text><path class="ln" d="M144 60 A 18 18 0 0 1 156 74"/><line class="bm" x1="134" y1="90" x2="214" y2="90" stroke-dasharray="4 3"/><line class="df" x1="134" y1="90" x2="205" y2="40"/><line class="df" x1="134" y1="90" x2="205" y2="140"/><path class="ln" d="M214 30 A 110 110 0 0 1 214 150"/><rect class="dt" x="212" y="82" width="10" height="16"/><text x="206" y="170">detector</text></svg>`;
+}
+function g_geo() {
+  const k = S.P.geo || 'plate', g = GEO[k];
+  return `<div class="sheet col modeinfo"><span class="eyebrow">Sample geometry options</span>
+    <div class="seg" id="geoseg" role="tablist">${Object.entries(GEO).map(([id, v]) => `<button data-geo="${id}" aria-pressed="${id === k}">${v.name}</button>`).join('')}</div>
+    <div class="geo"><div>${geoSvg(k)}</div><div class="col"><p><b>Best for:</b> ${g.best}</p><div><b>Strengths</b>${gl(g.pros)}</div><div><b>Watch out for</b>${gl(g.cons)}</div></div></div></div>
+  <div class="sheet col modeinfo"><span class="eyebrow">Reflection or transmission?</span>
+    <div class="tscroll"><table><tr><th></th><th>Reflection</th><th>Transmission</th></tr>
+    <tr><td>Beam path</td><td>Hits the surface, scatters back</td><td>Passes through the sample</td></tr>
+    <tr><td>Sample</td><td>Flat plate or pellet</td><td>Capillary, or thin foil or film</td></tr>
+    <tr><td>Intensity</td><td>Higher</td><td>Lower, longer counting</td></tr>
+    <tr><td>Orientation effects</td><td>Often strong</td><td>Weaker, especially with a rotating capillary</td></tr>
+    <tr><td>Radiation</td><td>Cu most common</td><td>Mo or Ag preferred for absorbing samples</td></tr>
+    <tr><td>Typical use</td><td>Phase ID, routine Rietveld</td><td>Small or sensitive samples, structure solution</td></tr></table></div>
+    <p class="small muted">Rule of thumb: plenty of robust powder and routine work, use a flat plate. Little sample, sensitive sample or a new structure, use a capillary.</p></div>`;
+}
+
+// PW 3: instrument choice + monochromator (index 11)
+function g_inst() {
+  return sheet('Choose the instrument and radiation',
+    gs(1, 'Pick the radiation', `<div class="tscroll"><table><tr><th>Radiation</th><th>Wavelength</th><th>Use it when</th></tr>
+      <tr><td>Cu Kα</td><td>1.5406 Å</td><td>Most routine work; strong diffraction and good low-angle resolution</td></tr>
+      <tr><td>Co Kα</td><td>1.789 Å</td><td>Samples containing Fe, Co or Mn, which fluoresce under Cu</td></tr>
+      <tr><td>Mo Kα</td><td>0.7107 Å</td><td>Absorbing samples, high-angle data, capillaries, structure solution</td></tr>
+      <tr><td>Ag Kα</td><td>0.5594 Å</td><td>Very absorbing samples and total scattering (PDF)</td></tr></table></div>`, [7, 'Try the radiation in the simulator']) +
+    gs(2, 'Choose the geometry and beam optics', gl(['Bragg–Brentano with a flat plate is the routine laboratory choice.', 'For capillary or transmission work use a focusing or parallel-beam optic (a curved monochromator or mirror) with a Debye–Scherrer set-up.', 'Parallel-beam optics suit rough, curved or small samples because the pattern is less sensitive to the sample height.'])) +
+    gs(3, 'Choose the monochromator or filter', `<div class="tscroll"><table><tr><th>Option</th><th>What it does</th><th>Trade-off</th></tr>
+      <tr><td>Kβ filter (for example Ni foil with Cu)</td><td>Removes most Kβ</td><td>Cheap; keeps the Kα1/Kα2 doublet and costs some intensity</td></tr>
+      <tr><td>Incident-beam monochromator (Johansson, Ge 111)</td><td>Selects Kα1 only</td><td>Sharper, symmetric peaks and better resolution; loses intensity</td></tr>
+      <tr><td>Diffracted-beam monochromator (graphite)</td><td>Cuts fluorescence and Kβ before the detector</td><td>Cleaner background; loses intensity</td></tr>
+      <tr><td>Mirror (parallel beam)</td><td>Makes the beam parallel</td><td>Strong beam, less sample-height error; slightly worse resolution</td></tr></table></div>
+      <p class="small muted">Energy-resolving strip detectors can also reduce fluorescence without a diffracted-beam monochromator.</p>`) +
+    gs(4, 'Choose the detector', gl(['Point detector: simple and slow.', 'Linear or area detector: collects many angles at once, so a scan takes minutes instead of hours.', 'Synchrotron beamlines give very high resolution, tiny samples and fast time-resolved data; neutrons help with light elements and magnetic order.'])) +
+    gs(5, 'See what the instrument does to the pattern', gp('Switch the instrument type in the simulator and watch the peak widths and shapes change.'), [7, 'Open the powder simulator']));
+}
+
+// PW 4: variable temperature / humidity (index 12)
+function g_vt() {
+  return sheet('Variable-temperature and humidity stages',
+    gs(1, 'Decide what you need to follow', gl(['Phase transitions and thermal expansion: variable temperature.', 'Hydration, dehydration and gas uptake (for example in framework materials): controlled humidity or gas flow.', 'Reactions and crystallisation: time-resolved measurements in a heated or gas-flow cell.'])) +
+    gs(2, 'Pick the stage', `<div class="tscroll"><table><tr><th>Stage</th><th>Typical range</th><th>Notes</th></tr>
+      <tr><td>Cold nitrogen stream (capillary)</td><td>About 80–500 K</td><td>Quick to change; good for capillaries</td></tr>
+      <tr><td>Closed-cycle helium cryostat</td><td>About 10–300 K</td><td>Low temperatures; slower and needs windows</td></tr>
+      <tr><td>High-temperature furnace or strip heater</td><td>To several hundred or over 1000 °C</td><td>Choose holder material to avoid reaction with the sample</td></tr>
+      <tr><td>Humidity (relative humidity) chamber</td><td>Roughly 5–95 % RH at a set temperature</td><td>Needs equilibration time at each step</td></tr></table></div>
+      <p class="small muted">Always check the stage and its limits with the instrument manager before you start.</p>`) +
+    gs(3, 'Set up the measurement', gl(['Wait for the temperature (and humidity) to stabilise at each point before you start counting; the time depends on the stage and the sample.', 'Use the same scan range and step at each point so patterns are comparable.', 'Include an internal standard when you can, because the sample height and the cell of the holder change with temperature.', 'For humidity runs, measure both increasing and decreasing humidity, because hydration often shows hysteresis.'])) +
+    gs(4, 'Watch out for', gl(['Sample displacement and thermal expansion of the stage shift peaks even when nothing happens to the sample.', 'Reaction with the holder or the atmosphere at high temperature.', 'Window or dome scattering and condensation, which add background.', 'Check the real sample temperature against a known transition if accuracy matters.'])) +
+    gs(5, 'Analyse a series', gp('Refine the first pattern fully, then use its model for the others and track the lattice parameters, scale factors and phase fractions against temperature or humidity (sequential refinement).')));
+}
+
+// PW 5: collect data (index 13)
+function g_collect() {
+  return sheet('Collect the data',
+    gs(1, 'Choose the angular range', gl(['Phase ID: about 5–70° 2θ with Cu is often enough.', 'Rietveld or structure solution: go as far as you can, to about 100–120° 2θ with Cu or an equivalent d-spacing (around 1 Å or better) with other radiations.'])) +
+    gs(2, 'Choose the step size and counting time', gl(['Step about 0.01–0.02° 2θ, with at least about 5 points across each peak.', 'Count long enough that the strongest peak has several thousand counts for ID and ten thousand or more for Rietveld.', 'Counting longer at high angle often pays off because the peaks are weak there.'])) +
+    gs(3, 'Spin or rotate the sample', gp('Spinning a flat plate or rotating a capillary improves the particle statistics. Check with a second scan that the pattern repeats.')) +
+    gs(4, 'Record the background and the instrument contribution', gl(['Measure an empty holder or capillary if the background is large.', 'Measure a standard (for example LaB6 or silicon) under the same conditions to get the instrument peak shape.'])) +
+    gs(5, 'Check before you leave', gl(['Look at the pattern: sensible background, no off-scale peaks, no unexpected humps.', 'Save the raw file in the instrument format and as plain .xy for other programs.', 'Write down the radiation, slits, optics, step, time, temperature and sample preparation.'])) +
+    gs(6, 'Look at what the pattern is made of', gp('Explore how the unit cell, the peak shape and the crystallite size shape the pattern.'), [7, 'Open the powder simulator']));
+}
+
+// PW: phase ID (14), structure solution (15), Rietveld (16)
+function g_phase_intro() {
+  return sheet('Phase identification',
+    gs(1, 'Prepare the pattern', gl(['Subtract or model the background and check the zero shift. An internal standard helps.', 'Find the peak positions and note any peaks that are broad, split or unusually strong.'])) +
+    gs(2, 'Search and match', gl(['Restrict the search with the elements you know are present.', 'Match positions (d-spacings) first and intensities second; intensities change with preferred orientation.', 'Typical databases: PDF (ICDD), the free COD, ICSD; free programs such as Profex or QualX can be used.'])) +
+    gs(3, 'Check all the peaks', gl(['Every strong peak should belong to a phase. Look for small leftover peaks: they may be minor phases.', 'Solid solutions move the peaks, so the match can be close rather than exact.'])) +
+    gs(4, 'Quantify', gp('Use the Rietveld method or the reference-intensity ratio method for weight fractions. Add an internal standard to estimate the amorphous content.'))) +
+    `<div class="sheet col modeinfo"><span class="eyebrow">Try it</span><p>Use the simulator below: search and match an unknown pattern, then fit the weight fractions of a mixture.</p></div>`;
+}
+function g_solve() {
+  return sheet('Structure solution from powder data',
+    gp('This route is for a new or poorly known structure. It needs high-quality data, so use a capillary and a monochromatic beam, and count for a long time.') +
+    gs(1, 'Collect good data', gp('Use a rotating capillary, a Kα1 or synchrotron beam and a long scan to a d-spacing of about 1 Å or better.')) +
+    gs(2, 'Index the pattern', gl(['Find accurate peak positions and index them to get the unit cell (programs such as DICVOL, TREOR, X-Cell or the indexing routine in TOPAS).', 'A figure of merit such as M20 above about 20 means the solution is likely correct. Check that the volume is consistent with the formula and density.'])) +
+    gs(3, 'Find the space group', gp('Use the systematic absences, then confirm the cell and the intensities with a Pawley or Le Bail fit that needs no structural model.')) +
+    gs(4, 'Solve the structure', gl(['Inorganic structures: direct methods or charge flipping on the extracted intensities (programs such as EXPO or Superflip).', 'Molecular materials: global optimisation in direct space, building the molecule as a rigid body or with a Z-matrix (DASH, TOPAS and FOX are examples).', 'Heavy peak overlap is the main difficulty, so think about which method copes best with it.'])) +
+    gs(5, 'Complete and refine', gp('Add missing atoms from difference Fourier maps, then refine by the Rietveld method with restraints on bond lengths and angles.')) +
+    gs(6, 'Check the result', gl(['Chemistry: sensible bond lengths, coordination and packing.', 'Fit: flat difference curve and sensible R factors.', 'Optional: compare with a computed structure (for example a DFT geometry optimisation).'])));
+}
+function g_riet() {
+  return sheet('Rietveld refinement',
+    gp('The Rietveld method fits the whole measured pattern with a calculated one built from the structure and the instrument. Refine in small steps and add parameters only when the fit needs them.') +
+    gs(1, 'Start with scale and background', gp('Refine the scale factor and a flexible background (Chebyshev polynomial with about 6–12 terms).')) +
+    gs(2, 'Fix the peak positions', gp('Refine the zero shift or sample displacement and then the unit cell parameters.')) +
+    gs(3, 'Refine the peak shape', gl(['Refine width and shape parameters (for example Caglioti U, V, W, or fundamental parameters).', 'Add crystallite size and strain broadening next, and asymmetry at low angle if needed.'])) +
+    gs(4, 'Add the atomic parameters', gl(['Refine atomic positions, with restraints for molecular materials.', 'Refine isotropic displacement parameters (grouped by element or site) before any anisotropic ones.', 'Refine occupancies only when you have a good reason and good data.'])) +
+    gs(5, 'Correct the intensities if needed', gp('Add a preferred-orientation correction (March–Dollase or spherical harmonics) only if the difference curve shows it. Check that absorption and surface roughness effects are not misleading.')) +
+    gs(6, 'Judge the fit', `<div class="tscroll"><table><tr><th>Check</th><th>What to look for</th></tr>
+      <tr><td>Difference curve</td><td>Flat, without systematic features at the peaks</td></tr>
+      <tr><td>Rwp compared with Rexp</td><td>Goodness of fit Rwp/Rexp close to 1 (a value up to about 2 is often acceptable for good data)</td></tr>
+      <tr><td>RBragg</td><td>Quality of the structural model for each phase</td></tr>
+      <tr><td>Chemistry</td><td>Sensible bond lengths and displacement parameters</td></tr>
+      <tr><td>Parameter values and esds</td><td>Stay reasonable and stable when the refinement is repeated; esds from Rietveld are usually underestimated</td></tr></table></div>`) +
+    gs(7, 'Report it', gp('Report the radiation, instrument, range, the refinement software and version, the R values, the cell and the key refined parameters. Include a figure of the fit with the difference curve.')) +
+    `<p class="small muted">Common programs: TOPAS (a Bruker product), GSAS-II, FullProf, Profex/BGMN and Jana2020. Names belong to their owners; no affiliation or endorsement is implied. Step-by-step TOPAS notes will be added on the website.</p>`);
+}
+STEPS.push(['Mount & workflow guide', g_sc]);          // 8
+STEPS.push(['1 · Prepare the sample', g_prep]);        // 9
+STEPS.push(['2 · Sample geometry', g_geo]);            // 10
+STEPS.push(['3 · Instrument & monochromator', g_inst]);// 11
+STEPS.push(['4 · Variable temperature & humidity', g_vt]); // 12
+STEPS.push(['5 · Collect the data', g_collect]);       // 13
+STEPS.push(['Phase identification', () => g_phase_intro() + s8b()]); // 14
+STEPS.push(['Structure solution', g_solve]);           // 15
+STEPS.push(['Rietveld refinement', g_riet]);           // 16
+WIRE[14] = wirePowder;
+WIRE[10] = () => { document.querySelectorAll('#geoseg [data-geo]').forEach(b => b.onclick = () => { S.P.geo = b.dataset.geo; render(); }); };
+
+// ================= modes =================
+const MODE_STEPS = { sc: [8, 0, 1, 2, 3, 4, 5, 6], pw: [9, 10, 11, 12, 13, 7, 14, 15, 16] };
+const MODE_TXT = {
+  sc: ['Single-crystal X-ray diffraction · guide and simulated experiment', 'Learn the whole single-crystal workflow, from picking and mounting a crystal to the SHELX .ins and .hkl files, and then run it on a simulated diffractometer. Every number comes from the physics of the simulated crystal.'],
+  pw: ['Powder X-ray diffraction (PXRD) · guide and simulator', 'Follow a powder measurement from sample preparation, through geometry, instrument and monochromator choice, to phase identification, structure solution and Rietveld refinement, with simulators for patterns, peak shape and mixtures.']
+};
+S.mode = 'sc'; S.visited = new Set();
+const order = () => MODE_STEPS[S.mode];
+const doneAny = i => i < 7 ? done(i) : S.visited.has(i);
+function render() {
+  if (S.view.timer) { clearInterval(S.view.timer); S.view.timer = null; }
+  const ord = order(); if (!ord.includes(S.step)) S.step = ord[0];
+  S.visited.add(S.step);
+  const pos = ord.indexOf(S.step);
+  document.querySelectorAll('#modeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === S.mode));
+  $('#eyebrow').textContent = MODE_TXT[S.mode][0]; $('#modesub').textContent = MODE_TXT[S.mode][1];
+  $('#rail').innerHTML = ord.map((idx, p) => `<button data-i="${idx}" aria-current="${idx === S.step}" class="${doneAny(idx) && idx !== S.step ? 'done' : ''}"><span class="n">${doneAny(idx) && idx !== S.step ? '✓' : p + 1}</span><span class="t">${STEPS[idx][0]}</span></button>`).join('');
+  const [title, fn] = STEPS[S.step];
+  $('#main').innerHTML = `<section class="step"><div class="stephead"><div><span class="eyebrow">Step ${pos + 1} of ${ord.length}</span><h2>${title}</h2></div><div class="row"><button class="btn" id="prev" ${pos === 0 ? 'disabled' : ''}>← Back</button><button class="btn primary" id="next" ${pos === ord.length - 1 ? 'disabled' : ''}>Next step →</button></div></div>${fn()}</section>`;
+  $('#prev').onclick = () => go(ord[pos - 1]); $('#next').onclick = () => go(ord[pos + 1]);
+  document.querySelectorAll('details[data-k]').forEach(d => d.ontoggle = () => { if (d.open) S.view.open.add(d.dataset.k); else S.view.open.delete(d.dataset.k); });
+  (WIRE[S.step] || (() => {}))();
+}
+function go(i) { if (i === undefined) return; S.step = i; try { localStorage.setItem('xlab-step2', S.step); localStorage.setItem('xlab-mode', S.mode); } catch (e) {} render(); window.scrollTo({ top: 0 }); }
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g) { const t = +g.dataset.go; if (!order().includes(t)) S.mode = MODE_STEPS.sc.includes(t) ? 'sc' : 'pw'; go(t); return; }
+  const m = e.target.closest('#modeseg button');
+  if (m) { S.mode = m.dataset.m; S.step = order()[0]; go(S.step); }
+});
 
 // ---------- boot ----------
-try { const v = +localStorage.getItem('xlab-step'); if (v >= 0 && v < STEPS.length) S.step = v; } catch (e) {}
+try { const m = localStorage.getItem('xlab-mode'); if (m === 'sc' || m === 'pw') S.mode = m; const v = +localStorage.getItem('xlab-step2'); if (order().includes(v)) S.step = v; else S.step = order()[0]; } catch (e) { S.step = order()[0]; }
 setupE(); render();
 setTimeout(() => { runAllFrom(1); render(); }, 50);
 
