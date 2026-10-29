@@ -163,6 +163,25 @@ i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:
 .geo svg .sm{fill:var(--ink);stroke:none}
 .geo svg .dt{fill:var(--c3);stroke:none;opacity:.85}
 .geo svg text{fill:var(--muted);font:10px var(--f-body)}
+
+.qchips{display:flex;flex-wrap:wrap;gap:6px}
+.qchip{border:1px solid var(--rule);background:var(--chip);color:var(--ink);font:500 .76rem var(--f-body);padding:3px 10px;border-radius:999px;cursor:pointer}
+.qchip.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
+.qbar{height:10px;border-radius:5px;background:var(--chip);overflow:hidden}.qbar i{display:block;height:100%;background:var(--accent)}
+.qgrid{display:flex;flex-wrap:wrap;gap:4px}
+.qgrid button{width:30px;height:28px;border-radius:6px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 .72rem var(--f-mono);cursor:pointer;padding:0}
+.qgrid button.ok{background:var(--good);color:var(--paper);border-color:var(--good)}
+.qgrid button.bad{background:var(--bad);color:var(--paper);border-color:var(--bad)}
+.qgrid button.cur{outline:2px solid var(--accent);outline-offset:1px}
+.qopt{display:flex;gap:10px;width:100%;text-align:left;border:1.5px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:10px;padding:11px 14px;cursor:pointer;font:inherit;line-height:1.4}
+.qopt:hover:not(:disabled){border-color:var(--accent)}
+.qopt .k{font:600 .8rem var(--f-mono);color:var(--muted);min-width:18px}
+.qopt.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 20%,transparent)}
+.qopt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.qopt:disabled{cursor:default;color:var(--ink)}
+.qexp{border-left:4px solid var(--good);padding:8px 14px;background:var(--chip);border-radius:0 8px 8px 0}
+.qexp.bad{border-left-color:var(--bad)}
+.qnote{border-left:3px solid var(--accent);padding:4px 0 4px 14px}
 </style>
 </head>
 <body>
@@ -173,7 +192,7 @@ i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:
   <span class="eyebrow" id="eyebrow"></span>
   <h1>Diffraction Lab</h1>
   <p class="sub" id="modesub"></p>
-  <div class="row"><div class="seg" id="modeseg" role="tablist" aria-label="Choose a technique"><button data-m="sc">Single crystal</button><button data-m="pw">Powder (PXRD)</button></div></div>
+  <div class="row"><div class="seg" id="modeseg" role="tablist" aria-label="Choose a technique"><button data-m="sc">Single crystal</button><button data-m="pw">Powder (PXRD)</button><button data-m="quiz">Quiz · 100 MCQs</button></div></div>
   <p class="small muted">Information is provided in good faith for general guidance and teaching only. We cannot accept responsibility for unintentional errors. Always consult your local experts, the manufacturer's manuals and your institution's approved procedures.</p>
 </header>
 <div class="layout">
@@ -2041,6 +2060,8 @@ const order = () => MODE_STEPS[S.mode];
 const doneAny = i => i < 7 ? done(i) : S.visited.has(i);
 function render() {
   if (S.view.timer) { clearInterval(S.view.timer); S.view.timer = null; }
+  if (S.mode === 'quiz') { quizView(); return; }
+  $('#rail').style.display = ''; document.querySelector('.layout').style.gridTemplateColumns = '';
   const ord = order(); if (!ord.includes(S.step)) S.step = ord[0];
   S.visited.add(S.step);
   const pos = ord.indexOf(S.step);
@@ -2058,8 +2079,156 @@ document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]');
   if (g) { const t = +g.dataset.go; if (!order().includes(t)) S.mode = MODE_STEPS.sc.includes(t) ? 'sc' : 'pw'; go(t); return; }
   const m = e.target.closest('#modeseg button');
-  if (m) { S.mode = m.dataset.m; S.step = order()[0]; go(S.step); }
+  if (m) { S.mode = m.dataset.m; if (S.mode === 'quiz') { render(); window.scrollTo({ top: 0 }); return; } S.step = order()[0]; go(S.step); }
 });
+
+
+// ================= Quiz: 100 MCQs =================
+// [category, question, CORRECT, wrong1, wrong2, wrong3, explanation]; option order is shuffled when shown
+const QCAT = { BAS: 'Fundamentals', SC: 'Single crystal', PW: 'Powder', RV: 'Refinement & solution', PR: 'Practical & safety' };
+const QS = [
+  // ---- Fundamentals (14)
+  ["BAS", "Which expression is Bragg's law?", "nλ = 2d sinθ", "λ = 2d cosθ", "nλ = d sinθ", "sinθ = 2dλ", "Constructive interference from planes spaced d apart occurs when the path difference 2d sinθ equals a whole number of wavelengths."],
+  ["BAS", "The wavelength of Cu Kα1 radiation is about:", "1.5406 Å", "0.7107 Å", "0.5594 Å", "2.2897 Å", "Cu Kα1 is 1.5406 Å. Mo Kα is 0.7107 Å, Ag Kα 0.5594 Å and Cr Kα 2.29 Å."],
+  ["BAS", "The wavelength of Mo Kα radiation is about:", "0.7107 Å", "1.5406 Å", "1.7902 Å", "0.1 Å", "Mo Kα (0.7107 Å) is the usual choice for small-molecule single-crystal work."],
+  ["BAS", "A cubic crystal has a = 4.00 Å. The d-spacing of the (200) planes is:", "2.00 Å", "4.00 Å", "8.00 Å", "1.00 Å", "For a cubic cell d = a / √(h² + k² + l²) = 4.00 / 2 = 2.00 Å."],
+  ["BAS", "With Cu Kα1 (1.5406 Å), a reflection with d = 2.00 Å appears at 2θ of about:", "45.3°", "22.6°", "90.6°", "38.5°", "sinθ = 1.5406 / (2 × 2.00) = 0.385, so θ = 22.65° and 2θ = 45.3°."],
+  ["BAS", "If the d-spacing of a set of planes increases, the Bragg peak moves to:", "Lower 2θ", "Higher 2θ", "The same 2θ", "Negative 2θ", "Since sinθ = λ / 2d, a larger d means a smaller θ."],
+  ["BAS", "Miller indices (hkl) describe:", "A family of parallel lattice planes", "The atomic number of the scatterer", "The wavelength of the beam", "The crystal's mass", "(hkl) give the intercepts of the planes on the unit-cell axes as reciprocals."],
+  ["BAS", "In a face-centred (F) lattice, which reflections are systematically absent?", "Those with mixed odd and even h, k, l", "Those with h + k + l odd", "Those with all h, k, l even", "None", "F-centring allows only hkl all odd or all even."],
+  ["BAS", "In a body-centred (I) lattice, reflections are absent when:", "h + k + l is odd", "h + k + l is even", "h is zero", "All indices are even", "I-centring requires h + k + l = 2n."],
+  ["BAS", "The 'phase problem' arises because:", "Detectors record intensities, not the phases of the structure factors", "X-rays have no phase", "Crystals are not periodic", "Wavelengths vary", "Intensity is proportional to |F|², so the phase of F is lost and has to be recovered by methods such as direct methods, intrinsic phasing or charge flipping."],
+  ["BAS", "The intensity of a Bragg reflection is proportional to:", "|F(hkl)|², the squared structure-factor amplitude", "F(hkl)", "The phase of F only", "1/|F|", "Intensities depend on the square of the structure-factor amplitude (with geometric and absorption corrections)."],
+  ["BAS", "Friedel's law says that, without anomalous scattering:", "I(hkl) = I(−h−k−l)", "I(hkl) = 0", "I(hkl) = 2 I(−h−k−l)", "Intensity depends on the crystal colour", "Friedel pairs are equal unless anomalous scattering breaks the symmetry, which is why it can reveal absolute structure."],
+  ["BAS", "Why are hydrogen atoms hard to locate with X-rays?", "X-rays scatter from electrons and hydrogen has only one", "Hydrogen is radioactive", "Hydrogen is heavier than carbon", "Hydrogen absorbs all X-rays", "Scattering power scales with electron count, so hydrogen contributes little, especially next to heavy atoms. Neutrons scatter from nuclei and see H and D well."],
+  ["BAS", "In the Ewald-sphere picture, a reflection is observed when:", "A reciprocal-lattice point lies on the surface of the sphere", "A reciprocal-lattice point is at the centre", "The sphere has zero radius", "The crystal is rotated by 90° always", "The sphere has radius 1/λ; diffraction happens when a reciprocal point touches its surface."],
+
+  // ---- Single crystal (31)
+  ["SC", "A good crystal for a laboratory single-crystal experiment is typically:", "0.05–0.3 mm in size, single and transparent without cracks", "5–10 mm and opaque", "Smaller than 1 µm", "A powder of many crystallites", "A single, well-formed crystal that is not too large for the beam gives clean data."],
+  ["SC", "Why is the crystal often mounted in oil on a loop?", "To hold it in place and protect it from solvent loss or reaction with air", "To increase absorption", "To change the cell", "To reduce the number of reflections", "Inert oil sticks the crystal to the loop and slows desolvation or decomposition, and it freezes into a glass at low temperature."],
+  ["SC", "Collecting data at about 100 K mainly helps because it:", "Reduces atomic motion and radiation damage, improving high-angle data", "Increases the unit cell", "Changes the wavelength", "Removes the need for absorption correction", "Smaller thermal motion means stronger high-angle reflections and more precise geometry."],
+  ["SC", "Mo radiation is often preferred to Cu for crystals containing heavy atoms because:", "Absorption is lower", "The wavelength is longer", "It is monochromatic only", "It gives fewer reflections", "Absorption increases strongly with wavelength and atomic number, so shorter-wavelength Mo is gentler on heavy-atom crystals."],
+  ["SC", "A main advantage of Cu radiation is:", "Stronger scattering from small crystals and stronger anomalous signal from light atoms, helping absolute-structure determination", "Lower absorption in all crystals", "Higher resolution than Mo", "No need for cooling", "Cu gives intense diffraction and a useful anomalous effect for O, N and S, though with a lower maximum resolution than Mo."],
+  ["SC", "Unit-cell determination in a short pre-scan uses:", "Positions of strong reflections, which are indexed to find the cell", "Only the crystal's colour", "The sample mass", "The purge gas", "The software searches for reflections, indexes them and refines an orientation matrix and cell."],
+  ["SC", "With Mo Kα (0.7107 Å), a resolution limit of 0.80 Å corresponds to θmax of about:", "26.4°", "13.2°", "35.5°", "53°", "sinθ = λ / 2d = 0.7107 / 1.60 = 0.444, so θ = 26.4°."],
+  ["SC", "Completeness is:", "The fraction of unique reflections to a given resolution that have been measured", "The fraction of crystal volume irradiated", "The ratio of R1 to wR2", "The ratio of cell volumes", "High completeness (typically above 99 % to the resolution limit) is needed for a reliable structure."],
+  ["SC", "Redundancy (multiplicity) is:", "The average number of times each unique reflection is measured", "The number of crystals used", "The fraction of weak reflections", "The number of atoms in the cell", "Higher redundancy improves precision and allows better scaling and absorption correction."],
+  ["SC", "Rint measures:", "The agreement between symmetry-equivalent reflections", "The refinement residual", "The detector noise", "The crystal size", "A low Rint indicates consistent data and a correct Laue group."],
+  ["SC", "The integration step:", "Extracts the intensity of each reflection from the diffraction images", "Fits atoms to the electron density", "Cools the crystal", "Creates the CIF", "Integration converts the frames into a list of hkl with intensities and uncertainties."],
+  ["SC", "Absorption correction is applied because:", "The path length through the crystal differs for different reflections, changing the measured intensity", "The detector needs calibration", "X-rays are not absorbed", "The cell changes with direction", "Multi-scan or numerical methods correct for the anisotropic absorption of the crystal."],
+  ["SC", "The space group is chosen using:", "Systematic absences and the merging statistics, checked against the structure", "The colour of the crystal", "The detector distance", "The temperature", "Absences identify the lattice centring and glide or screw elements, and the Laue symmetry comes from merging."],
+  ["SC", "A SHELX .hkl file contains:", "h, k, l, intensity and its standard uncertainty for each reflection", "The atomic coordinates", "The crystal photograph", "The source code of SHELX", "The .hkl file holds the reflection list. The model and instructions are in the .ins or .res file."],
+  ["SC", "A SHELX .ins file contains:", "The cell, wavelength, symmetry, atom list and refinement instructions", "Only the raw images", "The detector settings only", "The reflection intensities", "The .ins file defines the starting model and the commands for SHELXL."],
+  ["SC", "SHELXT is used to:", "Solve the structure (phase the data) to obtain a starting model", "Refine hydrogen atoms only", "Process the images", "Print the CIF", "SHELXT uses intrinsic phasing to find the initial atomic positions; SHELXL then refines the model."],
+  ["SC", "SHELXL refines the model by least squares against:", "F², using all the data", "F only, using strong data", "The images directly", "The phases", "Refinement against F² avoids rejecting weak or negative data."],
+  ["SC", "The R1 factor is defined as:", "Σ||Fo| − |Fc|| / Σ|Fo|", "Σ|Fo| / Σ|Fc|", "Σ(Fo² − Fc²)", "Σ|Fc| / N", "R1 compares observed and calculated structure-factor amplitudes."],
+  ["SC", "A good goodness-of-fit (GooF) value is close to:", "1", "0", "10", "100", "A GooF near 1 means the model fits the data and the weighting scheme is appropriate."],
+  ["SC", "A well-determined small-molecule structure typically has R1 of:", "Below about 5 %", "Above 30 %", "Exactly 0 %", "About 50 %", "For good data, R1 values of a few percent are normal."],
+  ["SC", "A Flack parameter near 0 with a small uncertainty indicates:", "The absolute structure is correct as modelled", "The structure is inverted", "The crystal is twinned", "The data are incomplete", "A value near 1 indicates the inverted structure; near 0.5 suggests a racemic or inversion twin."],
+  ["SC", "A Flack parameter near 0.5 suggests:", "A racemic (inversion) twin or an undetermined absolute structure", "A perfect model", "Missing hydrogen atoms", "A wrong wavelength", "Equal contributions of both enantiomers (or weak anomalous signal) give about 0.5."],
+  ["SC", "Anisotropic displacement parameters describe:", "The size and direction of thermal motion as ellipsoids", "The unit-cell shape", "The wavelength spread", "The detector response", "Non-hydrogen atoms are normally refined anisotropically if the data allow."],
+  ["SC", "Hydrogen atoms are usually:", "Placed in calculated positions and refined with a riding model", "Ignored", "Refined freely with anisotropic parameters", "Given the same position as the carbon", "Calculated positions with constrained geometry are standard when the data cannot locate H reliably."],
+  ["SC", "Disorder in a structure means:", "Part of the molecule occupies more than one position, which is modelled with partial occupancies", "The crystal is amorphous", "The wavelength is wrong", "The cell is too large", "Disorder is common for solvent, flexible groups and anions and is modelled with split positions and restraints."],
+  ["SC", "Twinning is:", "The intergrowth of two or more crystal domains with related orientations", "A single crystal with two colours", "A detector fault", "A type of absorption", "Twins give overlapping or extra reflections and need special treatment in refinement."],
+  ["SC", "Large residual electron-density peaks near a heavy atom often indicate:", "Absorption or series-termination errors", "Perfect data", "A missing cell", "Wrong wavelength labelling only", "Ripples near heavy atoms usually come from imperfect absorption correction or limited resolution."],
+  ["SC", "A CIF is:", "A standard crystallographic information file used to report and check structures", "A raw image format", "A type of detector", "A cooling system", "CIFs are checked with checkCIF and are the usual deposition format for structure databases."],
+  ["SC", "The goal of a data-collection strategy is to:", "Obtain high completeness and redundancy to the desired resolution in a reasonable time", "Measure only the strongest reflection", "Rotate the crystal as little as possible", "Maximise absorption", "A good strategy covers reciprocal space efficiently and with enough multiplicity."],
+  ["SC", "A scale factor that falls steadily during a long data collection suggests:", "Crystal decay or radiation damage", "A better crystal", "A larger cell", "A perfect absorption correction", "Decay is corrected during scaling, but severe decay limits the data quality."],
+  ["SC", "A hybrid photon-counting detector is valued because it:", "Counts individual photons with very low noise", "Absorbs no X-rays", "Needs no electronics", "Works without a beam", "Photon counting gives low background and fast readout."],
+
+  // ---- Powder (39)
+  ["PW", "A good particle size for powder diffraction is typically:", "Below about 10 µm", "About 1 mm", "About 1 cm", "Larger than 100 µm", "Fine, uniform grains give many crystallites in the beam and smooth Debye rings or intensities."],
+  ["PW", "Preferred orientation occurs when:", "Plate- or needle-shaped crystallites align and distort the relative peak intensities", "The sample is a gas", "The wavelength changes", "The temperature is too low", "Alignment means the diffraction condition is satisfied by more crystallites for some reflections than for others."],
+  ["PW", "Which helps to reduce preferred orientation?", "Side- or back-loading, a capillary, or spinning", "Pressing the powder firmly onto a glass slide", "Using larger plates", "Heating the sample", "Gentle preparation, random packing and capillary mounting reduce alignment."],
+  ["PW", "Bragg–Brentano reflection geometry is:", "Parafocusing, with the flat sample surface tangent to the focusing circle", "A capillary transmission arrangement", "A single-crystal method", "Neutron-only", "Divergent beam from the source refocuses at the detector for a flat sample."],
+  ["PW", "A key advantage of capillary (Debye–Scherrer) transmission is:", "Small amounts of sample, less preferred orientation and easy handling of air-sensitive samples", "Very high absorption", "No need for a detector", "Better for large flat sheets", "The sample is a thin rotating cylinder, with good statistics and little orientation effect."],
+  ["PW", "Flat-plate transmission is well suited to:", "Weakly absorbing samples, such as organics, held between thin films", "Heavy-metal powders only", "Large single crystals", "Liquids at high pressure only", "Thin transmission samples between foils work for low-absorption materials."],
+  ["PW", "A sample-height (displacement) error in reflection geometry causes:", "Peak shifts that are largest at low angles", "Changes only in peak width", "No effect", "Shifts that are largest at 180° 2θ", "The shift is proportional to cosθ, so it is largest at low 2θ."],
+  ["PW", "A Kβ filter (for example Ni for Cu radiation) is used to:", "Remove or reduce the Kβ lines", "Increase the intensity", "Shift the wavelength to Mo", "Cool the sample", "The filter absorbs Kβ more strongly than Kα."],
+  ["PW", "A Johansson-type incident-beam monochromator provides:", "A pure Kα1 beam", "A white beam", "Neutrons", "Kβ only", "A curved crystal selects Kα1, giving narrow peaks."],
+  ["PW", "Why use pure Kα1 radiation?", "It removes the Kα1/Kα2 doublet and gives sharper peaks at high angle", "It increases the intensity twofold", "It avoids absorption", "It reduces the cell volume", "The doublet separation grows with angle and can be mistaken for two peaks."],
+  ["PW", "The Kα2 line has an intensity of about what fraction of Kα1?", "About 0.5", "About 0.05", "About 2", "Exactly equal", "The Kα2:Kα1 ratio is about 1:2 for Cu and similar anodes."],
+  ["PW", "A variable-temperature stage is used to study:", "Phase transitions, thermal expansion and dehydration", "Only the sample colour", "The wavelength of the source", "The detector noise", "Heating or cooling in situ shows structural changes as a function of temperature."],
+  ["PW", "A humidity stage lets you:", "Study hydration and dehydration at controlled relative humidity", "Cool to 4 K", "Increase the beam intensity", "Remove the air path", "Hygroscopic materials and hydrates change phase with humidity."],
+  ["PW", "Phase identification compares:", "Peak positions and relative intensities with database patterns", "Only the colour of the powder", "Only the sample mass", "The detector serial numbers", "Databases such as ICDD PDF, COD and ICSD supply reference patterns."],
+  ["PW", "In phase matching, which information is generally more reliable?", "Peak positions", "Relative intensities", "Peak colour", "Background level", "Positions depend on the cell, while intensities are affected by orientation, absorption and sample preparation."],
+  ["PW", "A silicon powder standard (SRM 640) is used to:", "Check and correct zero shift and sample displacement", "Cool the sample", "Increase the wavelength", "Scatter neutrons", "A material with known cell parameters calibrates the 2θ scale."],
+  ["PW", "LaB₆ (SRM 660) is a standard for:", "The instrumental line profile", "Absorption of Mo", "Humidity", "Sample thickness", "Its very narrow peaks show the instrument's contribution to broadening."],
+  ["PW", "The Scherrer equation relates peak width to:", "Crystallite size, L = Kλ / (β cosθ)", "Temperature", "Absorption coefficient", "Sample mass", "Smaller crystallites give broader peaks, after correcting for the instrument."],
+  ["PW", "Besides small crystallite size, peak broadening can come from:", "Microstrain and instrumental effects", "Only colour", "Only absorption", "Only the number of atoms in the cell", "Strain, defects and the instrument all contribute and must be separated."],
+  ["PW", "Size broadening varies with θ as 1/cosθ, while strain broadening varies as:", "tanθ", "cosθ", "sinθ", "A constant", "The different angle dependence is the basis of Williamson–Hall analysis."],
+  ["PW", "Amorphous material in a powder pattern appears as:", "A broad hump rather than sharp peaks", "Sharp peaks only", "Negative intensity", "No signal at all", "Short-range order gives diffuse scattering."],
+  ["PW", "In quantitative phase analysis by Rietveld refinement, the weight fraction of a phase depends on:", "Its scale factor and the product of Z, formula mass and cell volume", "Its colour", "Only its peak height", "The detector size", "W = S·(ZMV) / Σ S·(ZMV) for each phase."],
+  ["PW", "Microabsorption is most serious when:", "Phases differ strongly in absorption and the particles are large", "All grains are tiny and equal", "The sample is a gas", "The wavelength is long", "Large strongly absorbing grains are under-represented in the measured intensity."],
+  ["PW", "A Pawley or Le Bail fit:", "Fits the cell and peak profile without a structural model and extracts intensities", "Refines atomic positions", "Solves the phase problem by itself", "Measures the temperature", "These whole-pattern fits give peak intensities for indexing checks or structure solution."],
+  ["PW", "Indexing a powder pattern means:", "Finding the unit cell that explains the peak positions", "Assigning colours to peaks", "Measuring the particle size", "Calibrating the detector", "Programs such as DICVOL or TOPAS's indexing find a cell from the first 20 or so peaks."],
+  ["PW", "Why is powder diffraction harder to interpret than single-crystal data?", "Reflections with similar d overlap, collapsing 3D data into one dimension", "X-rays are weaker", "Powders have no symmetry", "The sample is always amorphous", "Peak overlap limits the information, especially at high angle."],
+  ["PW", "A benefit of synchrotron powder diffraction is:", "High resolution and intensity with a tunable wavelength", "No need for a sample", "Lower absorption in all cases", "Single-crystal-like data", "Narrow peaks and good statistics help with complex patterns."],
+  ["PW", "Neutron powder diffraction is especially useful for:", "Locating light atoms such as H or D and for magnetic structures", "Heavy-atom absorption only", "Measuring colour", "Replacing temperature control", "Neutrons scatter from nuclei and from magnetic moments."],
+  ["PW", "A large unit cell (for example a MOF) requires you to:", "Start the scan at low 2θ", "Start at 90° 2θ", "Use a shorter wavelength only", "Use a thicker sample", "Large cells have large d-spacings, so their first peaks are at low angle."],
+  ["PW", "Spinning a capillary improves:", "Particle statistics and the smoothness of the pattern", "The wavelength", "The unit cell", "Absorption of X-rays", "Rotation averages over more crystallites."],
+  ["PW", "A zero-background holder is:", "A cut single-crystal plate that gives no Bragg peaks, useful for small samples", "A holder made of lead", "A vacuum chamber", "A cooling device", "An off-axis cut silicon plate does not diffract in the normal geometry."],
+  ["PW", "For air-sensitive samples you would use:", "A sealed capillary or an airtight dome holder", "An open flat plate", "A larger particle size", "A humidity stage at 80 %", "The sample must be protected from moisture and oxygen during the measurement."],
+  ["PW", "A strip (position-sensitive) detector:", "Records many 2θ points at once, so scans are faster", "Records only one point at a time", "Replaces the X-ray tube", "Removes the need for a sample", "Collecting a range of angles at once speeds up data collection."],
+  ["PW", "A typical step size for a powder scan is:", "0.01–0.02° 2θ", "5° 2θ", "0.0001° 2θ", "45° 2θ", "A step small enough to give several points across each peak width."],
+  ["PW", "A divergence slit that is too large at low angle will:", "Let the beam spill beyond the sample and give a wrong intensity", "Increase resolution", "Remove the Kα2 line", "Change the wavelength", "The irradiated length grows as 1/sinθ, so the beam can overshoot a small sample."],
+  ["PW", "Soller slits are used to:", "Limit axial divergence, which reduces low-angle peak asymmetry", "Select the wavelength", "Cool the sample", "Detect neutrons", "Parallel plates restrict the beam out of the diffraction plane."],
+  ["PW", "On heating a typical solid, the peaks usually shift to:", "Lower 2θ because of thermal expansion", "Higher 2θ", "The same 2θ", "Only the intensity changes", "Larger d-spacings appear at smaller angles."],
+  ["PW", "Many crystallites in the beam are needed so that:", "All orientations are represented and intensities are reproducible", "The wavelength is selected", "The sample absorbs more", "The cell is larger", "Poor statistics give spotty rings and unreliable intensities."],
+  ["PW", "Grinding a sample too aggressively can:", "Induce strain, amorphisation or a phase change", "Never cause problems", "Increase the crystallite size", "Change the wavelength", "Gentle preparation preserves the structure being studied."],
+
+  // ---- Refinement and solution (14)
+  ["RV", "Rietveld refinement is:", "A least-squares fit of the whole calculated pattern to the measured pattern", "A way to index single crystals", "A method of measuring temperature", "A type of detector", "The model's cell, atoms and profile parameters are refined to match every point of the pattern."],
+  ["RV", "Rwp measures:", "The weighted agreement between the observed and calculated profiles", "The crystallite size", "The wavelength", "The sample height", "It is the weighted profile residual minimised in the refinement."],
+  ["RV", "A Rietveld goodness of fit (χ² = Rwp / Rexp) close to 1 means:", "The fit is about as good as the counting statistics allow", "The fit is terrible", "The pattern is empty", "The model has too few atoms", "Rexp is the best R expected from counting statistics."],
+  ["RV", "A sensible order for a Rietveld refinement is:", "Scale and background, zero shift, cell, profile, then atomic positions and displacement parameters", "Atomic positions first, everything else last", "Displacement parameters only", "Cell last", "Refine the robust, well-determined parameters first and add more as the fit improves."],
+  ["RV", "Strongly correlated parameters in a refinement:", "Can drift or give unreliable values and should be constrained or refined carefully", "Always improve the fit", "Are irrelevant", "Mean the data are perfect", "Examples are scale factor and displacement parameters, or background and amorphous content."],
+  ["RV", "A common route to a crystal structure from powder data is:", "Direct-space methods such as simulated annealing using a known molecular fragment, or charge flipping", "Only visual inspection", "Reading it from the database always", "Using colour", "These methods search for a structure that matches the extracted intensities."],
+  ["RV", "Why are restraints or rigid bodies often used in powder refinement?", "The data contain fewer independent reflections than single-crystal data", "Powders have no bonds", "The wavelength is unknown", "The sample is amorphous", "Using known bond lengths and angles limits the number of free parameters."],
+  ["RV", "A large difference curve at the tops of strong peaks usually points to:", "A peak-shape or profile problem", "Perfect fit", "A wrong database", "Too much sample", "The profile function, asymmetry or instrument contribution may be wrong."],
+  ["RV", "Preferred orientation can be modelled in the refinement with:", "A March–Dollase or spherical-harmonic correction", "A change of wavelength", "A different detector", "A larger sample", "These corrections describe how the intensities are modified by texture."],
+  ["RV", "A refinement can have low Rwp and still be wrong because:", "Chemically unreasonable geometry may fit the data, so bonds and angles must be checked", "Rwp is always correct", "The wavelength is fixed", "Powders cannot be refined", "A good fit is necessary, but not sufficient, for a correct structure."],
+  ["RV", "Which database is the main source of organic and metal-organic crystal structures?", "The Cambridge Structural Database (CSD)", "The periodic table", "A phone book", "The weather service", "The CSD holds small-molecule organic and metal-organic structures; COD is an open alternative."],
+  ["RV", "Rexp depends mainly on:", "The number of data points and counting statistics", "The model's atom count", "The sample colour", "The wavelength only", "More counts per point give a lower Rexp."],
+  ["RV", "In the structure-solution step, charge flipping works by:", "Iteratively modifying the electron density and structure factors in reciprocal and real space", "Flipping the crystal", "Measuring charge directly", "Counting photons", "It needs only the intensities, not a chemical model."],
+  ["RV", "A parametric approach in a refinement program means:", "Parameters such as cell or scale can be tied to temperature or time across many patterns", "No parameters are used", "Only one pattern can be used", "The pattern is simulated only", "Sequential or parametric fits extract trends from a series of in-situ patterns."],
+
+  // ---- Practical and safety (2)
+  ["PR", "Which is correct practice with an X-ray diffractometer?", "Never bypass the interlocks, and follow local radiation rules and training", "Open the enclosure while the beam is on to check alignment", "Remove the shielding to see better", "Use the instrument without training", "Interlocks and shielding protect users from the beam. Follow your local rules and ask your radiation protection supervisor."],
+  ["PR", "When handling liquid nitrogen for a cryostream you should:", "Wear gloves and eye protection and ensure ventilation", "Use bare hands", "Store it in a sealed bottle", "Pour it on the floor", "Cryogens cause cold burns and displace oxygen; use approved containers, protection and ventilation."]
+];
+const QST = { cat: 'ALL', i: 0, ans: {}, shuf: false };
+const qrnd = (i, s) => { const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return x - Math.floor(x); };
+const qPerm = n => [0, 1, 2, 3].map(i => [qrnd(n * 7 + i, 3), i]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+function qList() { let l = QS.map((_, i) => i).filter(i => QST.cat === 'ALL' || QS[i][0] === QST.cat); if (QST.shuf) l = l.map(i => [qrnd(i, 9), i]).sort((a, b) => a[0] - b[0]).map(x => x[1]); return l; }
+function renderQuiz() {
+  const list = qList(), n = list.length, i = Math.min(QST.i, n - 1), qi = list[i], q = QS[qi], ans = QST.ans;
+  const cnt = c => QS.filter(x => c === 'ALL' || x[0] === c).length, pr = qPerm(qi), a = ans[qi], L = 'ABCD';
+  const cats = ['ALL', ...Object.keys(QCAT)].map(c => `<button class="qchip ${QST.cat === c ? 'on' : ''}" data-qc="${c}">${c === 'ALL' ? 'All' : QCAT[c]} (${cnt(c)})</button>`).join('');
+  const opts = pr.map((o, k) => { const cls = a == null ? '' : o === 0 ? 'ok' : o === a ? 'bad' : ''; return `<button class="qopt ${cls}" data-o="${o}" ${a != null ? 'disabled' : ''}><span class="k">${L[k]}</span><span>${esc(q[2 + o])}</span></button>`; }).join('');
+  const exp = a == null ? '' : `<div class="qexp ${a === 0 ? '' : 'bad'}"><p><b>${a === 0 ? 'Correct.' : 'Not quite.'}</b> The answer is <b>${esc(q[2])}</b>.</p><p class="small">${esc(q[6])}</p></div>`;
+  const grid = list.map((k, j) => { const v = ans[k]; return `<button class="${v == null ? '' : v === 0 ? 'ok' : 'bad'} ${j === i ? 'cur' : ''}" data-j="${j}" aria-label="Question ${j + 1}">${j + 1}</button>`; }).join('');
+  const total = list.filter(k => ans[k] != null).length, right = list.filter(k => ans[k] === 0).length;
+  const fin = total === n ? `<div class="qnote"><p><b>Finished this set: ${right} of ${n} correct (${Math.round(100 * right / n)} %).</b></p>${(() => { const w = {}; list.forEach(k => { if (ans[k] !== 0) w[QS[k][0]] = (w[QS[k][0]] || 0) + 1; }); const e = Object.entries(w).sort((x, y) => y[1] - x[1]); return e.length ? `<p class="small">Revisit: ${e.map(([c, v]) => QCAT[c] + ' (' + v + ' missed)').join(', ')}.</p>` : '<p class="small">No questions missed.</p>'; })()}</div>` : '';
+  $('#main').innerHTML = `<div class="col"><div class="sheet col"><div class="qchips">${cats}</div>
+    <div class="row"><span class="small" style="font-family:var(--f-mono)">Question ${i + 1} of ${n} · ${right} correct, ${total - right} wrong, ${n - total} to go</span><span style="flex:1"></span><label class="small"><input type="checkbox" id="qsh" ${QST.shuf ? 'checked' : ''}> Shuffle order</label><button class="btn" id="qre">Restart</button></div>
+    <div class="qbar"><i style="width:${total / n * 100}%"></i></div></div>
+    <div class="sheet col"><span class="eyebrow">${esc(QCAT[q[0]])}</span><h3 style="font-family:var(--f-body);font-weight:600;font-size:1.1rem">${esc(q[1])}</h3><div class="col" role="group" aria-label="Answer options">${opts}</div>${exp}
+      <div class="row"><button class="btn" id="qpv" ${i === 0 ? 'disabled' : ''}>← Previous</button><button class="btn primary" id="qnx" ${i === n - 1 ? 'disabled' : ''}>${a == null ? 'Skip →' : 'Next →'}</button></div>${fin}</div>
+    <div class="sheet col"><span class="eyebrow">Question map (green correct, red wrong)</span><div class="qgrid">${grid}</div></div></div>`;
+  document.querySelectorAll('[data-qc]').forEach(b => b.onclick = () => { QST.cat = b.dataset.qc; QST.i = 0; renderQuiz(); });
+  document.querySelectorAll('.qopt').forEach(b => b.onclick = () => { QST.ans[qi] = +b.dataset.o; renderQuiz(); });
+  document.querySelectorAll('.qgrid button').forEach(b => b.onclick = () => { QST.i = +b.dataset.j; renderQuiz(); window.scrollTo({ top: 0 }); });
+  $('#qpv').onclick = () => { QST.i = i - 1; renderQuiz(); }; $('#qnx').onclick = () => { QST.i = i + 1; renderQuiz(); };
+  $('#qsh').onchange = e => { QST.shuf = e.target.checked; QST.i = 0; renderQuiz(); }; $('#qre').onclick = () => { QST.ans = {}; QST.i = 0; renderQuiz(); };
+  window._qa = a; window._qpr = pr; window._qqi = qi;
+}
+document.addEventListener('keydown', e => { if (S.mode !== 'quiz' || window._qa != null) return; const k = '1234'.indexOf(e.key); if (k >= 0) { QST.ans[window._qqi] = window._qpr[k]; renderQuiz(); } });
+function quizView() {
+  document.querySelectorAll('#modeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === S.mode));
+  $('#eyebrow').textContent = 'Test yourself'; $('#modesub').textContent = '100 multiple-choice questions on single-crystal and powder diffraction. Green is correct, red is wrong, and every answer is explained.';
+  $('#rail').innerHTML = ''; $('#rail').style.display = 'none'; document.querySelector('.layout').style.gridTemplateColumns = 'minmax(0,1fr)'; renderQuiz();
+}
 
 // ---------- boot ----------
 try { const m = localStorage.getItem('xlab-mode'); if (m === 'sc' || m === 'pw') S.mode = m; const v = +localStorage.getItem('xlab-step2'); if (order().includes(v)) S.step = v; else S.step = order()[0]; } catch (e) { S.step = order()[0]; }
