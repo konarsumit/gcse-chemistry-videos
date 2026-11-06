@@ -1,0 +1,302 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>XRD Home</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Schibsted+Grotesk:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: a title band, a view switcher with search, then map and list side by side on wide screens, stacked on phones. */
+:root{
+  --bg:#F3F6F8; --surface:#FFFFFF; --ink:#102A3C; --muted:#54656F; --line:#D5DDE3;
+  --land:#E1E8ED; --acc:#0B6E7A; --acc-ink:#FFFFFF;
+  --good:#0B7A5A; --warn:#B26B00; --slate:#6F7F8B;
+  --syn:#2563A8; --neu:#C2571A; --xfel:#7B4BB0;
+  --f-display:"Schibsted Grotesk",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0D1A24; --surface:#13242F; --ink:#E5EEF3; --muted:#9DB0BC; --line:#26394A;
+  --land:#1C3042; --acc:#38B6C4; --acc-ink:#06232A;
+  --good:#3CC49A; --warn:#E3A33F; --slate:#8A9BA8;
+  --syn:#74ABEA; --neu:#EE8B52; --xfel:#B994E3; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0D1A24; --surface:#13242F; --ink:#E5EEF3; --muted:#9DB0BC; --line:#26394A;
+  --land:#1C3042; --acc:#38B6C4; --acc-ink:#06232A;
+  --good:#3CC49A; --warn:#E3A33F; --slate:#8A9BA8;
+  --syn:#74ABEA; --neu:#EE8B52; --xfel:#B994E3; color-scheme:dark; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(1.6rem,3.2vw,2.3rem);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{font:600 .92rem var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.tab:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.search{flex:1 1 220px;min-width:0;display:flex;gap:8px}
+input[type=search],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=search]{flex:1 1 auto}
+.main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}}
+.mapbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;position:sticky;top:8px}
+@media (max-width:900px){.mapbox{position:static}}
+#map{width:100%;position:relative}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 4px 2px;font-size:.85rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;border:2px solid transparent}
+.count{font-family:var(--f-mono);font-size:.82rem;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px;min-width:0}
+details.row{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0}
+details.row[open]{border-color:var(--acc)}
+details.row.sel{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 30%,transparent)}
+summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:start}
+summary::-webkit-details-marker{display:none}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.meta{grid-column:1;color:var(--muted);font-size:.88rem}
+.badge{grid-row:1/3;grid-column:2;font:600 .75rem var(--f-body);padding:3px 9px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;align-self:start}
+.b-good{color:var(--good)} .b-warn{color:var(--warn)} .b-slate{color:var(--slate)} .b-syn{color:var(--syn)} .b-neu{color:var(--neu)} .b-xfel{color:var(--xfel)}
+.det{padding:2px 12px 12px;display:grid;gap:8px;font-size:.95rem}
+.det dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px}
+.det dt{color:var(--muted);font-size:.85rem;padding-top:1px}
+.det dd{margin:0;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--f-mono);font-size:.78rem;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--muted)}
+.chip.y{color:var(--good);border-color:var(--good)} .chip.n{color:var(--warn);border-color:var(--warn)}
+a{color:var(--acc)}
+.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.foot{color:var(--muted);font-size:.86rem;max-width:90ch}
+.hoverTip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.82rem;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:5;transform:translate(-50%,-130%)}
+.datamaps-bubble{cursor:pointer}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>XRD Home</h1>
+    <p class="sub">Where X-ray diffraction can be done in Sweden, and where the world's synchrotron and neutron sources are. Statuses come from each facility's own web page, read on 5 November 2026.</p>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="group" aria-label="View">
+      <button class="tab" id="t-se" aria-pressed="true">Swedish universities</button>
+      <button class="tab" id="t-syn" aria-pressed="false">Synchrotrons and XFELs</button>
+      <button class="tab" id="t-neu" aria-pressed="false">Neutron sources</button>
+      <button class="tab" id="t-hr" aria-pressed="false">High-res powder beamlines</button>
+      <button class="tab" id="t-all" aria-pressed="false">All facilities</button>
+    </div>
+    <div class="search">
+      <input type="search" id="q" placeholder="Search name, city, country or technique" aria-label="Search">
+      <select id="sf" aria-label="Filter by confirmation status">
+        <option value="">All statuses</option>
+        <option>Confirmed</option><option>Partly confirmed</option><option>Not confirmed</option><option>Not yet checked</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="main">
+    <section class="mapbox" aria-label="Map">
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section class="list" aria-label="Results">
+      <div class="count" id="count"></div>
+      <div id="rows"></div>
+    </section>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@3.5.17/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson@1.6.9/topojson.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.world.min.js"></script>
+<script>var DM_WORLD = window.Datamaps;</script>
+<script src="https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.swe.min.js"></script>
+<script>var DM_SWE = window.Datamaps;</script>
+<script>
+var SE = [{"id": "uu", "name": "Uppsala University: X-ray Laboratory", "short": "Uppsala", "city": "Uppsala", "lat": 59.84, "lon": 17.647, "status": "Confirmed", "powder": "Yes", "single": "Not listed", "what": "Six diffraction setups listed (Siemens D5000 x2, Bruker D8, Bruker TwinTwin, Bruker Discover, Philips MRD) plus Epsilon 3 XRF. Powder, thin-film (GIXRD, XRR, reciprocal space maps, texture and stress), with high and low temperature chambers. The page lists no single-crystal instrument.", "access": "Open to all Uppsala researchers and to external users. Commissioned analyses for companies and organisations are offered, but only to a limited extent.", "contact": "See the facility web page for current contacts.", "url": "https://www.uu.se/en/department/chemistry-angstrom-laboratory/research/inorganic-chemistry/research-infrastructure/x-ray-laboratory"}, {"id": "su", "name": "Stockholm University: MACAL X-ray diffraction and crystallographic service", "short": "Stockholm University", "city": "Stockholm", "lat": 59.3637, "lon": 18.0598, "status": "Partly confirmed", "powder": "Unknown", "single": "Unknown", "what": "X-ray diffraction unit within the Materials Analysis Center at Arrhenius Laboratory (MACAL). Crystallographic service for structure solution (and refinement, CIF files) from X-ray and electron diffraction data. The page does not name instruments or say powder or single crystal.", "access": "Open to academic and industrial users. Bookings through the LIMS system by trained users. Service prices on request.", "contact": "See the facility web page for current contacts.", "url": "https://www.su.se/english/divisions/department-of-chemistry/research/infrastructure"}, {"id": "umu", "name": "Umeå University: X-ray Diffraction Facility (KBC)", "short": "Umeå", "city": "Umeå", "lat": 63.8206, "lon": 20.3052, "status": "Confirmed", "powder": "Yes", "single": "Yes", "what": "Single-crystal diffraction for small molecules and macromolecules, with robotic crystal set-ups, crystal growth and cryo data collection. Equipment can also be used for powder and fibre diffraction. Strong structural-biology focus.", "access": "Services are described for research groups on the SLU and Umeå University campus. External access is not stated on the page.", "contact": "See the facility web page for current contacts.", "url": "https://www.umu.se/en/research/infrastructure/x_ray_diffraction_facility"}, {"id": "chalmers", "name": "Chalmers: Materials Analysis Laboratory (CMAL)", "short": "Chalmers", "city": "Gothenburg", "lat": 57.689, "lon": 11.978, "status": "Partly confirmed", "powder": "Unknown", "single": "Unknown", "what": "X-ray diffraction is listed among CMAL's main fields, alongside electron microscopy, optical microscopy and mass spectrometry. Instruments are not itemised on the page.", "access": "Open to Chalmers researchers and to external users from academia and industry. User access and prices are on a linked page.", "contact": "See the facility web page for current contacts.", "url": "https://www.chalmers.se/en/research/infrastructure/cmal/"}, {"id": "miun", "name": "Mid Sweden University: MILAB", "short": "Mid Sweden", "city": "Sundsvall", "lat": 62.393, "lon": 17.283, "status": "Partly confirmed", "powder": "Unknown", "single": "Unknown", "what": "Rigaku SmartLab XE purchased (SEK 6 million) for standard diffraction, thin films and pair distribution function analysis, with a 2D detector and three X-ray sources. Check whether it is now installed and in use.", "access": "External access not stated.", "contact": "See the facility web page for current contacts.", "url": "https://www.miun.se/en/Research/research-centers/fscn-research-centre/labs-at-fscn/milab/XRD-equipment-provides-new-opportunities-to-analyze-materials/"}, {"id": "lund", "name": "Lund University (departmental X-ray labs)", "short": "Lund", "city": "Lund", "lat": 55.7114, "lon": 13.206, "status": "Not confirmed", "powder": "Unknown", "single": "Unknown", "what": "No departmental XRD facility page was found. Lund hosts MAX IV and ESS nearby (see the facilities map).", "access": "Not confirmed.", "contact": "See the facility web page for current contacts.", "url": "https://www.lu.se/"}, {"id": "kth", "name": "KTH Royal Institute of Technology", "short": "KTH", "city": "Stockholm", "lat": 59.3498, "lon": 18.0707, "status": "Not confirmed", "powder": "Unknown", "single": "Unknown", "what": "PhD courses on X-ray diffraction exist (Hultgren Lab, CeXS), but no facility page with instruments was found.", "access": "Not confirmed.", "contact": "See the facility web page for current contacts.", "url": "https://www.kth.se/"}, {"id": "ltu", "name": "Luleå University of Technology", "short": "Luleå", "city": "Luleå", "lat": 65.617, "lon": 22.14, "status": "Not confirmed", "powder": "Unknown", "single": "Unknown", "what": "A PhD course in instrumental analysis with XRD exists and a materials imaging and analysis infrastructure (LUMIA) is listed. Instrument details were not found.", "access": "Not confirmed.", "contact": "See the facility web page for current contacts.", "url": "https://www.ltu.se/en/research/research-infrastructure/about-our-research-infrastructure"}, {"id": "gu", "name": "University of Gothenburg", "short": "Gothenburg", "city": "Gothenburg", "lat": 57.6836, "lon": 11.953, "status": "Not confirmed", "powder": "Unknown", "single": "Unknown", "what": "Structural biology is a research area; no chemical or materials XRD facility page was found.", "access": "Not confirmed.", "contact": "See the facility web page for current contacts.", "url": "https://www.gu.se/en"}, {"id": "liu", "name": "Linköping University", "short": "Linköping", "city": "Linköping", "lat": 58.398, "lon": 15.576, "status": "Not confirmed", "powder": "Unknown", "single": "Unknown", "what": "Thin-film physics is a strong area at Linköping, but no facility page was found.", "access": "Not confirmed.", "contact": "See the facility web page for current contacts.", "url": "https://liu.se/en"}, {"id": "karoli", "name": "Karolinska Institutet", "short": "Karolinska Institutet", "city": "Solna", "lat": 59.35, "lon": 18.0258, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://ki.se/en"}, {"id": "swedis", "name": "Swedish University of Agricultural Sciences (SLU)", "short": "Swedish University of Agricultural Sciences (SLU)", "city": "Uppsala", "lat": 59.814, "lon": 17.656, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.slu.se/en/"}, {"id": "örebro", "name": "Örebro University", "short": "Örebro University", "city": "Örebro", "lat": 59.254, "lon": 15.24, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.oru.se/english/"}, {"id": "karlst", "name": "Karlstad University", "short": "Karlstad University", "city": "Karlstad", "lat": 59.405, "lon": 13.579, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.kau.se/en"}, {"id": "linnae", "name": "Linnaeus University", "short": "Linnaeus University", "city": "Växjö", "lat": 56.8556, "lon": 14.8279, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://lnu.se/en/"}, {"id": "mälard", "name": "Mälardalen University", "short": "Mälardalen University", "city": "Västerås", "lat": 59.619, "lon": 16.543, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.mdu.se/en"}, {"id": "dalarn", "name": "Dalarna University", "short": "Dalarna University", "city": "Falun", "lat": 60.6188, "lon": 15.625, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.du.se/en/"}, {"id": "halmst", "name": "Halmstad University", "short": "Halmstad University", "city": "Halmstad", "lat": 56.6715, "lon": 12.877, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.hh.se/english.html"}, {"id": "jönköp", "name": "Jönköping University", "short": "Jönköping University", "city": "Jönköping", "lat": 57.778, "lon": 14.161, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://ju.se/en"}, {"id": "kristi", "name": "Kristianstad University", "short": "Kristianstad University", "city": "Kristianstad", "lat": 56.0372, "lon": 14.15, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.hkr.se/en"}, {"id": "univer", "name": "University of Skövde", "short": "University of Skövde", "city": "Skövde", "lat": 58.398, "lon": 13.857, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.his.se/en/"}, {"id": "univer", "name": "University of Borås", "short": "University of Borås", "city": "Borås", "lat": 57.72, "lon": 12.94, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.hb.se/en/"}, {"id": "södert", "name": "Södertörn University", "short": "Södertörn University", "city": "Huddinge", "lat": 59.2181, "lon": 17.942, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.sh.se/english"}, {"id": "blekin", "name": "Blekinge Institute of Technology", "short": "Blekinge Institute of Technology", "city": "Karlskrona", "lat": 56.183, "lon": 15.591, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.bth.se/eng/"}, {"id": "malmö ", "name": "Malmö University", "short": "Malmö University", "city": "Malmö", "lat": 55.61, "lon": 12.994, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://mau.se/en/"}, {"id": "univer", "name": "University of Gävle", "short": "University of Gävle", "city": "Gävle", "lat": 60.667, "lon": 17.146, "status": "Not yet checked", "powder": "Unknown", "single": "Unknown", "what": "Not yet checked.", "access": "Not yet checked.", "contact": "See the facility web page for current contacts.", "url": "https://www.hig.se/en"}];
+var FAC = [{"name": "MAX IV", "city": "Lund", "country": "Sweden", "kind": "Synchrotron", "status": "Operating", "lat": 55.7366, "lon": 13.2187, "url": "https://www.maxiv.lu.se", "note": "DanMAX (powder PXRD2D, HERDi; single-crystal SINCRYS expected first light Oct 2026). Scandinavian Crystallography Service for single-crystal chemical crystallography."}, {"name": "European Spallation Source (ESS)", "city": "Lund", "country": "Sweden", "kind": "Neutron (spallation)", "status": "Under construction", "lat": 55.7351, "lon": 13.2503, "url": "https://europeanspallationsource.se", "note": "User programme planned for 2027 (per Wikipedia). Several instruments already completed."}, {"name": "ESRF (Extremely Brilliant Source)", "city": "Grenoble", "country": "France", "kind": "Synchrotron", "status": "Operating", "lat": 45.2074, "lon": 5.6902, "url": "https://www.esrf.fr", "note": "High-resolution powder diffraction at ID22."}, {"name": "ILL (Institut Laue-Langevin)", "city": "Grenoble", "country": "France", "kind": "Neutron (reactor)", "status": "Operating", "lat": 45.207, "lon": 5.691, "url": "https://www.ill.eu", "note": ""}, {"name": "SOLEIL", "city": "Saint-Aubin", "country": "France", "kind": "Synchrotron", "status": "Operating", "lat": 48.708, "lon": 2.145, "url": "https://www.synchrotron-soleil.fr", "note": "Powder and single-crystal diffraction at CRISTAL."}, {"name": "Laboratoire Léon Brillouin (LLB)", "city": "Saclay", "country": "France", "kind": "Neutron (reactor)", "status": "Operating", "lat": 48.724, "lon": 2.147, "url": "https://www-llb.cea.fr", "note": ""}, {"name": "Diamond Light Source", "city": "Harwell, Oxfordshire", "country": "United Kingdom", "kind": "Synchrotron", "status": "Operating", "lat": 51.574, "lon": -1.309, "url": "https://www.diamond.ac.uk", "note": "High-resolution powder diffraction at I11, single-crystal at I19."}, {"name": "ISIS Neutron and Muon Source", "city": "Harwell, Oxfordshire", "country": "United Kingdom", "kind": "Neutron (spallation)", "status": "Operating", "lat": 51.572, "lon": -1.308, "url": "https://www.isis.stfc.ac.uk", "note": "Includes PEARL (high-pressure diffraction)."}, {"name": "PETRA III (DESY)", "city": "Hamburg", "country": "Germany", "kind": "Synchrotron", "status": "Operating", "lat": 53.576, "lon": 9.883, "url": "https://photon-science.desy.de", "note": "Powder diffraction at P02.1 and chemical crystallography at P24."}, {"name": "European XFEL", "city": "Schenefeld", "country": "Germany", "kind": "XFEL", "status": "Operating", "lat": 53.588, "lon": 9.828, "url": "https://www.xfel.eu", "note": ""}, {"name": "BESSY II", "city": "Berlin", "country": "Germany", "kind": "Synchrotron", "status": "Operating", "lat": 52.429, "lon": 13.531, "url": "https://www.helmholtz-berlin.de", "note": ""}, {"name": "KARA (KIT)", "city": "Karlsruhe", "country": "Germany", "kind": "Synchrotron", "status": "Operating", "lat": 49.094, "lon": 8.435, "url": "https://www.anka.kit.edu", "note": ""}, {"name": "DELTA", "city": "Dortmund", "country": "Germany", "kind": "Synchrotron", "status": "Operating", "lat": 51.493, "lon": 7.412, "url": "https://www.delta.tu-dortmund.de", "note": ""}, {"name": "FRM II / MLZ", "city": "Garching", "country": "Germany", "kind": "Neutron (reactor)", "status": "Operating", "lat": 48.265, "lon": 11.674, "url": "https://mlz-garching.de", "note": ""}, {"name": "Elettra Sincrotrone Trieste", "city": "Trieste", "country": "Italy", "kind": "Synchrotron", "status": "Operating", "lat": 45.64, "lon": 13.876, "url": "https://www.elettra.eu", "note": ""}, {"name": "Swiss Light Source (PSI)", "city": "Villigen", "country": "Switzerland", "kind": "Synchrotron", "status": "Operating", "lat": 47.536, "lon": 8.216, "url": "https://www.psi.ch/en/sls", "note": "Upgrade to SLS 2.0 was completed in recent years; check operating status."}, {"name": "SINQ (PSI)", "city": "Villigen", "country": "Switzerland", "kind": "Neutron (spallation)", "status": "Operating", "lat": 47.537, "lon": 8.237, "url": "https://www.psi.ch/en/sinq", "note": ""}, {"name": "SwissFEL (PSI)", "city": "Villigen", "country": "Switzerland", "kind": "XFEL", "status": "Operating", "lat": 47.54, "lon": 8.225, "url": "https://www.psi.ch/en/swissfel", "note": ""}, {"name": "ALBA", "city": "Cerdanyola del Vallès", "country": "Spain", "kind": "Synchrotron", "status": "Operating", "lat": 41.485, "lon": 2.114, "url": "https://www.cells.es", "note": "Powder diffraction at MSPD."}, {"name": "SOLARIS", "city": "Kraków", "country": "Poland", "kind": "Synchrotron", "status": "Operating", "lat": 50.026, "lon": 19.907, "url": "https://synchrotron.uj.edu.pl", "note": ""}, {"name": "ASTRID2", "city": "Aarhus", "country": "Denmark", "kind": "Synchrotron", "status": "Operating", "lat": 56.169, "lon": 10.2, "url": "https://www.isa.au.dk", "note": ""}, {"name": "Budapest Neutron Centre", "city": "Budapest", "country": "Hungary", "kind": "Neutron (reactor)", "status": "Operating", "lat": 47.488, "lon": 18.961, "url": "https://www.bnc.hu", "note": ""}, {"name": "CANAM / Řež reactor", "city": "Řež", "country": "Czech Republic", "kind": "Neutron (reactor)", "status": "Operating", "lat": 50.162, "lon": 14.362, "url": "https://www.neutron.cz", "note": ""}, {"name": "JINR Dubna (IBR-2)", "city": "Dubna", "country": "Russia", "kind": "Neutron (reactor)", "status": "Operating", "lat": 56.744, "lon": 37.19, "url": "http://flnp.jinr.ru", "note": "Operating status should be checked."}, {"name": "PIK reactor", "city": "Gatchina", "country": "Russia", "kind": "Neutron (reactor)", "status": "Operating", "lat": 59.56, "lon": 30.13, "url": "https://www.pnpi.spb.ru", "note": "Operating status should be checked."}, {"name": "SKIF", "city": "Novosibirsk (Koltsovo)", "country": "Russia", "kind": "Synchrotron", "status": "Operating", "lat": 54.92, "lon": 83.03, "url": "https://srf-skif.ru", "note": "Commissioned 2025."}, {"name": "SESAME", "city": "Allan", "country": "Jordan", "kind": "Synchrotron", "status": "Operating", "lat": 32.09, "lon": 35.79, "url": "https://www.sesame.org.jo", "note": ""}, {"name": "Advanced Photon Source (APS)", "city": "Lemont, Illinois", "country": "United States", "kind": "Synchrotron", "status": "Operating", "lat": 41.711, "lon": -87.986, "url": "https://www.aps.anl.gov", "note": "11-BM mail-in powder diffraction (check availability)."}, {"name": "NSLS-II", "city": "Upton, New York", "country": "United States", "kind": "Synchrotron", "status": "Operating", "lat": 40.868, "lon": -72.876, "url": "https://www.bnl.gov/nsls2", "note": ""}, {"name": "Advanced Light Source (ALS)", "city": "Berkeley, California", "country": "United States", "kind": "Synchrotron", "status": "Operating", "lat": 37.876, "lon": -122.248, "url": "https://als.lbl.gov", "note": ""}, {"name": "SSRL / LCLS (SLAC)", "city": "Menlo Park, California", "country": "United States", "kind": "Synchrotron", "status": "Operating", "lat": 37.419, "lon": -122.203, "url": "https://www-ssrl.slac.stanford.edu", "note": "LCLS is an X-ray free-electron laser on the same site."}, {"name": "CHESS", "city": "Ithaca, New York", "country": "United States", "kind": "Synchrotron", "status": "Operating", "lat": 42.444, "lon": -76.48, "url": "https://www.chess.cornell.edu", "note": ""}, {"name": "Spallation Neutron Source and HFIR (Oak Ridge)", "city": "Oak Ridge, Tennessee", "country": "United States", "kind": "Neutron (spallation)", "status": "Operating", "lat": 35.94, "lon": -84.3, "url": "https://neutrons.ornl.gov", "note": "Also hosts the High Flux Isotope Reactor."}, {"name": "NIST Center for Neutron Research", "city": "Gaithersburg, Maryland", "country": "United States", "kind": "Neutron (reactor)", "status": "Operating", "lat": 39.133, "lon": -77.215, "url": "https://www.nist.gov/ncnr", "note": ""}, {"name": "LANSCE (Los Alamos)", "city": "Los Alamos, New Mexico", "country": "United States", "kind": "Neutron (spallation)", "status": "Operating", "lat": 35.88, "lon": -106.3, "url": "https://lansce.lanl.gov", "note": ""}, {"name": "MURR", "city": "Columbia, Missouri", "country": "United States", "kind": "Neutron (reactor)", "status": "Operating", "lat": 38.939, "lon": -92.324, "url": "https://www.murr.missouri.edu", "note": ""}, {"name": "Canadian Light Source", "city": "Saskatoon", "country": "Canada", "kind": "Synchrotron", "status": "Operating", "lat": 52.133, "lon": -106.632, "url": "https://www.lightsource.ca", "note": ""}, {"name": "McMaster Nuclear Reactor", "city": "Hamilton", "country": "Canada", "kind": "Neutron (reactor)", "status": "Operating", "lat": 43.262, "lon": -79.92, "url": "https://nuclear.mcmaster.ca", "note": ""}, {"name": "Sirius (CNPEM)", "city": "Campinas", "country": "Brazil", "kind": "Synchrotron", "status": "Operating", "lat": -22.8006, "lon": -47.0645, "url": "https://lnls.cnpem.br", "note": ""}, {"name": "SPring-8 / SACLA", "city": "Harima, Hyōgo", "country": "Japan", "kind": "Synchrotron", "status": "Operating", "lat": 34.933, "lon": 134.5, "url": "http://www.spring8.or.jp", "note": "SACLA X-ray free-electron laser is on the same site."}, {"name": "Photon Factory (KEK)", "city": "Tsukuba", "country": "Japan", "kind": "Synchrotron", "status": "Operating", "lat": 36.08, "lon": 140.075, "url": "https://www2.kek.jp/imss/pf/", "note": ""}, {"name": "NanoTerasu", "city": "Sendai", "country": "Japan", "kind": "Synchrotron", "status": "Operating", "lat": 38.254, "lon": 140.831, "url": "https://nanoterasu.jp", "note": ""}, {"name": "UVSOR", "city": "Okazaki", "country": "Japan", "kind": "Synchrotron", "status": "Operating", "lat": 34.95, "lon": 137.17, "url": "https://www.uvsor.ims.ac.jp", "note": ""}, {"name": "J-PARC MLF", "city": "Tokai", "country": "Japan", "kind": "Neutron (spallation)", "status": "Operating", "lat": 36.447, "lon": 140.566, "url": "https://j-parc.jp", "note": ""}, {"name": "JRR-3", "city": "Tokai", "country": "Japan", "kind": "Neutron (reactor)", "status": "Operating", "lat": 36.48, "lon": 140.55, "url": "https://jrr3.jaea.go.jp", "note": "Operating status should be checked."}, {"name": "Pohang Light Source-II", "city": "Pohang", "country": "South Korea", "kind": "Synchrotron", "status": "Operating", "lat": 36.0127, "lon": 129.313, "url": "https://pal.postech.ac.kr", "note": ""}, {"name": "HANARO (KAERI)", "city": "Daejeon", "country": "South Korea", "kind": "Neutron (reactor)", "status": "Operating", "lat": 36.43, "lon": 127.368, "url": "https://www.kaeri.re.kr", "note": ""}, {"name": "Shanghai Synchrotron Radiation Facility", "city": "Shanghai", "country": "China", "kind": "Synchrotron", "status": "Operating", "lat": 31.175, "lon": 121.585, "url": "https://ssrf.sari.ac.cn", "note": ""}, {"name": "Beijing Synchrotron Radiation Facility", "city": "Beijing", "country": "China", "kind": "Synchrotron", "status": "Operating", "lat": 39.906, "lon": 116.233, "url": "http://english.ihep.cas.cn/bsrf/", "note": ""}, {"name": "High Energy Photon Source (HEPS)", "city": "Beijing (Huairou)", "country": "China", "kind": "Synchrotron", "status": "Under construction", "lat": 40.403, "lon": 116.67, "url": "http://english.ihep.cas.cn/heps/", "note": "Described as under construction, scheduled for 2026. Check status."}, {"name": "NSRL Hefei", "city": "Hefei", "country": "China", "kind": "Synchrotron", "status": "Operating", "lat": 31.843, "lon": 117.265, "url": "http://en.nsrl.ustc.edu.cn", "note": ""}, {"name": "China Spallation Neutron Source (CSNS)", "city": "Dongguan", "country": "China", "kind": "Neutron (spallation)", "status": "Operating", "lat": 22.78, "lon": 113.87, "url": "http://csns.ihep.cas.cn", "note": ""}, {"name": "Taiwan Photon Source / Taiwan Light Source", "city": "Hsinchu", "country": "Taiwan", "kind": "Synchrotron", "status": "Operating", "lat": 24.776, "lon": 121.01, "url": "https://www.nsrrc.org.tw", "note": ""}, {"name": "Singapore Synchrotron Light Source", "city": "Singapore", "country": "Singapore", "kind": "Synchrotron", "status": "Operating", "lat": 1.297, "lon": 103.779, "url": "https://ssls.nus.edu.sg", "note": ""}, {"name": "Synchrotron Light Research Institute", "city": "Nakhon Ratchasima", "country": "Thailand", "kind": "Synchrotron", "status": "Operating", "lat": 14.8795, "lon": 102.0204, "url": "https://www.slri.or.th", "note": ""}, {"name": "Indus-2 (RRCAT)", "city": "Indore", "country": "India", "kind": "Synchrotron", "status": "Operating", "lat": 22.6807, "lon": 75.8325, "url": "https://www.rrcat.gov.in", "note": ""}, {"name": "Dhruva (BARC)", "city": "Mumbai", "country": "India", "kind": "Neutron (reactor)", "status": "Operating", "lat": 19.005, "lon": 72.917, "url": "https://www.barc.gov.in", "note": ""}, {"name": "Australian Synchrotron (ANSTO)", "city": "Clayton, Victoria", "country": "Australia", "kind": "Synchrotron", "status": "Operating", "lat": -37.914, "lon": 145.136, "url": "https://www.ansto.gov.au/facilities/australian-synchrotron", "note": "Powder diffraction at the Powder Diffraction beamline."}, {"name": "OPAL reactor (ANSTO)", "city": "Lucas Heights, New South Wales", "country": "Australia", "kind": "Neutron (reactor)", "status": "Operating", "lat": -34.056, "lon": 150.978, "url": "https://www.ansto.gov.au/facilities/australian-centre-for-neutron-scattering", "note": ""}];
+var HR = [{"bl": "ID22", "fac": "ESRF", "loc": "Grenoble, France", "tech": "High-resolution powder diffraction with multi-analyser detector; also high-energy and in situ work", "en": "6 to 80 keV", "contact": "See the facility web page for current contacts.", "access": "ESRF proposal system, standard calls twice a year. Rapid access and other proposal types are listed on the ESRF proposal types page.", "dl": "Standard: 2 March and 10 September", "src": "https://www.esrf.fr", "status": "Confirmed"}, {"bl": "I11", "fac": "Diamond Light Source", "loc": "Harwell, UK", "tech": "High-resolution powder diffraction: multi-analyser crystal (MAC) detector and Mythen2 position-sensitive detector", "en": "Default wavelength 0.827 Å (about 15 keV)", "contact": "See the facility web page for current contacts.", "access": "Diamond User Office, normal peer-reviewed proposals; rapid access and block allocation exist but were Not verified for I11.", "dl": "Not verified (check Diamond's call page)", "src": "https://www.diamond.ac.uk/Instruments/Crystallography/I11.html", "status": "Confirmed"}, {"bl": "P02.1", "fac": "PETRA III, DESY", "loc": "Hamburg, Germany", "tech": "High-resolution and high-energy powder diffraction (title of the beamline paper)", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "DESY DOOR system. Regular calls, long-term (LTP) and block allocation (BAG) proposals.", "dl": "Spring 2026 call skipped because of the PETRA III shutdown from September 2026 to spring 2027. Next call opened summer 2026. Exact dates: Not verified", "src": "https://photon-science.desy.de/users_area/calls__deadlines/DP1_eng.html", "status": "Partly confirmed"}, {"bl": "CRISTAL", "fac": "SOLEIL", "loc": "Saint-Aubin, France", "tech": "High-resolution powder and single-crystal diffraction", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "Standard proposals, plus one-year block allocation groups (BAG).", "dl": "Standard: 15 February and 15 September. Call 39 closed 15 September 2026.", "src": "https://www.synchrotron-soleil.fr", "status": "Partly confirmed"}, {"bl": "MS (Materials Science) powder beamline", "fac": "Swiss Light Source (PSI)", "loc": "Villigen, Switzerland", "tech": "High-resolution powder diffraction (Mythen detector)", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "PSI proposal system. The X+n powder call is currently suspended. SLS has been upgraded to SLS 2.0.", "dl": "15 April and 15 October", "src": "https://www.psi.ch/en/sls", "status": "Partly confirmed"}, {"bl": "MSPD (BL04)", "fac": "ALBA", "loc": "Barcelona, Spain", "tech": "High-resolution powder diffraction (multi-analyser plus position-sensitive detector, from memory)", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "ALBA user office (useroffice.cells.es). Fully operational since mid 2012 for public and proprietary users.", "dl": "Not verified", "src": "https://www.cells.es/en/instruments/beamlines/bl04-mspd/home/notices", "status": "Partly confirmed"}, {"bl": "DanMAX (HERDi and PXRD2D)", "fac": "MAX IV", "loc": "Lund, Sweden", "tech": "HERDi: high-resolution powder diffraction with a microstrip detector. PXRD2D: powder diffraction with an area detector. Full-field imaging.", "en": "15 to 35 keV", "contact": "See the facility web page for current contacts.", "access": "MAX IV DUO portal. Fast Access at DanMAX, and long-term proposals for PIs at Danish universities. Swedish users: see the Scandinavian Crystallography Service.", "dl": "Not verified (see MAX IV call for proposals)", "src": "https://www.maxiv.lu.se/beamlines-accelerators/beamlines/danmax/", "status": "Confirmed"}, {"bl": "11-BM-B", "fac": "Advanced Photon Source (APS)", "loc": "Argonne, USA", "tech": "High-resolution powder diffraction, delta d/d below 1.2e-4. Mail-in service.", "en": "About 30 keV (27 keV for Sn samples)", "contact": "See the facility web page for current contacts.", "access": "Mail-in: short General User proposal, free for non-proprietary users, one APS shift (8 hours or 8 samples), results typically in under a month.", "dl": "APS cycle 2027-1: closed 21 October 2026 (runs 1 February to 26 April 2027). Mail-in short proposals: Not verified", "src": "https://11bm.xray.aps.anl.gov/users", "status": "Confirmed"}, {"bl": "Powder Diffraction (10-BM-1)", "fac": "Australian Synchrotron (ANSTO)", "loc": "Melbourne, Australia", "tech": "High-resolution powder diffraction, Mythen detector", "en": "8 to 21 keV", "contact": "See the facility web page for current contacts.", "access": "Australian Synchrotron proposal rounds via the General User Guide Melbourne pages.", "dl": "Not on the beamtime guide page; see the General User Guide", "src": "https://www.ansto.gov.au/user-access/instruments/australian-synchrotron-beamlines/powder-diffraction/beamtime-guide", "status": "Confirmed"}, {"bl": "XPD (28-ID-2), 28-ID-1 PDF", "fac": "NSLS-II", "loc": "Upton, USA", "tech": "Powder diffraction and PDF", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "NSLS-II general user proposals", "dl": "Not verified", "src": "https://www.bnl.gov/nsls2/userguide/index.php", "status": "Not verified"}, {"bl": "Other candidates not yet researched", "fac": "SPring-8 (BL02B2), Photon Factory, Elettra MCX, BESSY II, SSRF, NSRRC, PLS-II, Indus-2, Sirius, CLS, CHESS, SSRL", "loc": "Various", "tech": "Powder diffraction beamlines exist at several of these", "en": "Not verified", "contact": "See the facility web page for current contacts.", "access": "Not verified", "dl": "Not verified", "src": "", "status": "Not verified"}];
+var state = { view:'se', q:'', sf:'', sel:null };
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* normalise both datasets into one row shape */
+var ROWS = [];
+SE.forEach(function(s,i){
+  ROWS.push({id:'se'+i, group:'se', name:s.name, city:s.city, country:'Sweden', lat:s.lat, lon:s.lon, status:s.status,
+    kind:'University', powder:s.powder, single:s.single, what:s.what, access:s.access, contact:s.contact, url:s.url, key:s.status});
+});
+FAC.forEach(function(f,i){
+  var kind=f.kind, g = kind.indexOf('Neutron')===0 ? 'neu' : 'syn';
+  ROWS.push({id:'f'+i, group:g, name:f.name, city:f.city, country:f.country, lat:f.lat, lon:f.lon, status:f.status,
+    kind:kind, what:f.note, url:f.url, key:(kind==='XFEL'?'xfel':g), uc:f.status.indexOf('Under')===0});
+});
+
+function visible(){
+  var q=state.q.toLowerCase();
+  return ROWS.filter(function(r){
+    if(state.view==='se'){ if(!(r.group==='se' || r.country==='Sweden')) return false; }
+    else if(state.view==='syn'){ if(r.group!=='syn') return false; }
+    else if(state.view==='neu'){ if(r.group!=='neu') return false; }
+    else { if(r.group==='se') return false; }
+    if(state.sf && r.group==='se' && r.status!==state.sf) return false;
+    if(state.sf && r.group!=='se' && state.view==='se') return false;
+    if(q){ var hay=(r.name+' '+r.city+' '+r.country+' '+r.kind+' '+(r.what||'')+' '+(r.access||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+    return true;
+  });
+}
+
+function badgeFor(r){
+  if(r.group==='se'){
+    var c = r.status==='Confirmed'?'b-good': r.status==='Partly confirmed'?'b-warn':'b-slate';
+    return '<span class="badge '+c+'">'+esc(r.status)+'</span>';
+  }
+  var c2 = r.key==='neu'?'b-neu': r.key==='xfel'?'b-xfel':'b-syn';
+  return '<span class="badge '+c2+'">'+esc(r.kind)+'</span>';
+}
+
+function rowHtml(r){
+  var meta = r.city + (r.group==='se'?'':', '+r.country) + (r.group!=='se' && r.status!=='Operating' ? ' · '+r.status : '');
+  var d='';
+  if(r.group==='se'){
+    d += '<div class="chips"><span class="chip '+(r.powder==='Yes'?'y':r.powder==='Not listed'?'n':'')+'">Powder: '+esc(r.powder)+'</span><span class="chip '+(r.single==='Yes'?'y':r.single==='Not listed'?'n':'')+'">Single crystal: '+esc(r.single)+'</span></div>';
+  }
+  d += '<dl>';
+  if(r.what) d += '<dt>'+(r.group==='se'?'Equipment':'Notes')+'</dt><dd>'+esc(r.what)+'</dd>';
+  if(r.access) d += '<dt>Access</dt><dd>'+esc(r.access)+'</dd>';
+  if(r.contact) d += '<dt>Contact</dt><dd>'+esc(r.contact)+'</dd>';
+  d += '<dt>Location</dt><dd><span class="chip">'+r.lat.toFixed(3)+', '+r.lon.toFixed(3)+'</span></dd>';
+  if(r.url) d += '<dt>Source</dt><dd><a href="'+esc(r.url)+'" target="_blank" rel="noopener">'+esc(r.url.replace(/^https?:\/\//,'').slice(0,60))+'</a></dd>';
+  d += '</dl>';
+  return '<details class="row'+(state.sel===r.id?' sel':'')+'" id="r-'+r.id+'"'+(state.sel===r.id?' open':'')+' data-id="'+r.id+'">'
+    +'<summary><span class="nm">'+esc(r.name)+'</span>'+badgeFor(r)+'<span class="meta">'+esc(meta)+'</span></summary>'
+    +'<div class="det">'+d+'</div></details>';
+}
+
+function colorFor(r){
+  if(r.group==='se') return r.status==='Confirmed'?cssv('--good'): r.status==='Partly confirmed'?cssv('--warn'): cssv('--slate');
+  return r.key==='neu'?cssv('--neu'): r.key==='xfel'?cssv('--xfel'): cssv('--syn');
+}
+
+function renderList(){
+  var v=visible();
+  document.getElementById('count').textContent = v.length+(v.length===1?' result':' results');
+  document.getElementById('rows').innerHTML = v.length ? '<div class="list">'+v.map(rowHtml).join('')+'</div>'
+    : '<div class="empty">Nothing matches. Clear the search or choose another view.</div>';
+  Array.prototype.forEach.call(document.querySelectorAll('details.row'), function(d){
+    d.addEventListener('toggle', function(){ if(d.open){ state.sel=d.getAttribute('data-id'); drawBubbles(); } });
+  });
+  var lg='';
+  if(state.view==='se'){
+    lg = '<span><i class="dot" style="background:var(--good)"></i>Confirmed</span><span><i class="dot" style="background:var(--warn)"></i>Partly confirmed</span><span><i class="dot" style="background:var(--slate)"></i>Not confirmed or not yet checked</span><span><i class="dot" style="background:var(--syn)"></i>Synchrotron</span><span><i class="dot" style="background:var(--neu)"></i>Neutron</span>';
+  } else {
+    lg = '<span><i class="dot" style="background:var(--syn)"></i>Synchrotron</span><span><i class="dot" style="background:var(--xfel)"></i>X-ray free-electron laser</span><span><i class="dot" style="background:var(--neu)"></i>Neutron source</span><span><i class="dot" style="background:transparent;border-color:var(--ink)"></i>Under construction</span>';
+  }
+  document.getElementById('legend').innerHTML = lg;
+  document.getElementById('foot').textContent = state.view==='se'
+    ? 'Confirmed means the facility page lists X-ray diffraction instruments. Partly confirmed means diffraction is mentioned without instrument details. Not confirmed means no facility page was found. Not yet checked means the university has not been looked at. Karolinska Institutet, SLU and the smaller universities are in the list so the map is complete.'
+    : 'Locations are approximate (site level). Facility lists are built from public encyclopedia lists and each facility’s own name; websites were not individually checked and beamline notes are examples, so confirm current status and access on the facility site before relying on them.';
+}
+
+var map=null;
+function bubbleData(){
+  var rank=function(r){ return r.group!=='se'?3 : r.status==='Confirmed'?2 : r.status==='Partly confirmed'?1 : 0; };
+  var v=visible().slice().sort(function(a,b){ return rank(a)-rank(b); }), out=[];
+  v.forEach(function(r){
+    var isSel = state.sel===r.id;
+    out.push({ id:r.id, name:r.name, latitude:r.lat, longitude:r.lon, radius: isSel? 11 : (state.view==='se'?7:5),
+      fillColor: r.uc ? 'rgba(0,0,0,0)' : colorFor(r), borderColor: r.uc ? colorFor(r) : (isSel? cssv('--ink') : cssv('--surface')),
+      borderWidth: r.uc ? 2 : (isSel?3:1.5), city:r.city, status:r.status });
+  });
+  return out;
+}
+function drawBubbles(){
+  if(!map) return;
+  var data=bubbleData();
+  map.bubbles(data, { popupOnHover:false, highlightOnHover:false, fillOpacity:0.9 });
+  d3.select('#map').selectAll('circle.datamaps-bubble')
+    .style('fill', function(d){ return d.fillColor; })
+    .style('stroke', function(d){ return d.borderColor; })
+    .style('stroke-width', function(d){ return d.borderWidth+'px'; })
+    .style('fill-opacity', 0.92);
+  var tip=document.getElementById('tip');
+  d3.select('#map').selectAll('circle.datamaps-bubble')
+    .on('click', function(d){ pick(d.id); })
+    .on('mouseover', function(d){
+      if(!tip){ tip=document.createElement('div'); tip.id='tip'; tip.className='hoverTip'; document.getElementById('map').appendChild(tip); }
+      var m=d3.mouse(document.getElementById('map')); tip.textContent=d.name; tip.style.left=m[0]+'px'; tip.style.top=m[1]+'px'; tip.hidden=false;
+    })
+    .on('mouseout', function(){ if(tip) tip.hidden=true; });
+}
+function pick(id){
+  state.sel=id;
+  var el=document.getElementById('r-'+id);
+  if(!el){ renderList(); el=document.getElementById('r-'+id); }
+  Array.prototype.forEach.call(document.querySelectorAll('details.row'), function(d){ d.classList.toggle('sel', d.id==='r-'+id); });
+  if(el){ el.open=true; el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  drawBubbles();
+}
+
+function drawMap(){
+  var el=document.getElementById('map'); el.innerHTML=''; map=null;
+  var w=el.clientWidth || 600, h;
+  var common={ element:el, fills:{defaultFill:cssv('--land')},
+    geographyConfig:{ borderColor:cssv('--line'), borderWidth:0.6, highlightOnHover:false, popupOnHover:false },
+    bubblesConfig:{ borderWidth:1.5, borderColor:cssv('--surface'), fillOpacity:0.9 } };
+  try{
+    if(state.view==='se'){
+      h=Math.max(420, Math.min(640, Math.round(w*1.05))); el.style.height=h+'px';
+      map=new DM_SWE(Object.assign({scope:'swe', height:h, width:w,
+        setProjection:function(element){
+          var yv=function(d){ var p=d*Math.PI/180; return Math.log(Math.tan(Math.PI/4+p/2)); };
+          var s=(h*0.92)/(yv(69.2)-yv(55.2));
+          var projection=d3.geo.mercator().center([16.2,62.2]).scale(s).translate([w/2,h/2]);
+          return {path:d3.geo.path().projection(projection), projection:projection};
+        }}, common));
+    } else {
+      h=Math.round(w*0.42); el.style.height=h+'px';
+      map=new DM_WORLD(Object.assign({scope:'world', width:w, height:h,
+        setProjection:function(element){
+          var projection=d3.geo.equirectangular().scale(w/(2*Math.PI)).translate([w/2, h*0.6]).center([0,0]);
+          return {path:d3.geo.path().projection(projection), projection:projection};
+        }}, common));
+    }
+  }catch(e){ el.textContent='The map could not be drawn.'; return; }
+  drawBubbles();
+}
+
+function renderHR(){
+  var q=state.q.toLowerCase();
+  var v=HR.filter(function(h){ return !q || (h.bl+' '+h.fac+' '+h.loc+' '+h.tech+' '+h.contact).toLowerCase().indexOf(q)>=0; });
+  document.getElementById('count').textContent=v.length+(v.length===1?' beamline':' beamlines');
+  document.getElementById('rows').innerHTML = v.map(function(h){
+    var c = h.status==='Confirmed'?'b-good': h.status==='Partly confirmed'?'b-warn':'b-slate';
+    var d='<dl><dt>Technique</dt><dd>'+esc(h.tech)+'</dd><dt>Energy</dt><dd>'+esc(h.en)+'</dd><dt>Contact</dt><dd>'+esc(h.contact)+'</dd><dt>Access</dt><dd>'+esc(h.access)+'</dd><dt>Deadlines</dt><dd>'+esc(h.dl)+'</dd>'
+      +(h.src?'<dt>Source</dt><dd><a href="'+esc(h.src)+'" target="_blank" rel="noopener">'+esc(h.src.replace(/^https?:\/\//,'').slice(0,60))+'</a></dd>':'')+'</dl>';
+    return '<details class="row"><summary><span class="nm">'+esc(h.fac+': '+h.bl)+'</span><span class="badge '+c+'">'+esc(h.status)+'</span><span class="meta">'+esc(h.loc)+'</span></summary><div class="det">'+d+'</div></details>';
+  }).join('') || '<div class="empty">Nothing matches.</div>';
+  document.getElementById('foot').textContent='Read from official facility pages on 5 November 2026. "Not verified" means I could not read it on an official page, so check before you rely on it. Emails are shown only where a page printed them. Proposal deadlines change, so confirm on the facility user office page.';
+}
+function setView(v){
+  state.view=v; state.sel=null;
+  ['se','syn','neu','hr','all'].forEach(function(k){ document.getElementById('t-'+k).setAttribute('aria-pressed', String(k===v)); });
+  document.getElementById('sf').style.display = v==='se' ? '' : 'none';
+  var hr=(v==='hr'); document.querySelector('.mapbox').style.display = hr?'none':''; document.querySelector('.main').style.gridTemplateColumns = hr?'minmax(0,1fr)':'';
+  if(hr){ renderHR(); return; }
+  if(v!=='se'){ state.sf=''; document.getElementById('sf').value=''; }
+  renderList(); drawMap();
+}
+['se','syn','neu','hr','all'].forEach(function(k){ document.getElementById('t-'+k).addEventListener('click', function(){ setView(k); }); });
+document.getElementById('q').addEventListener('input', function(e){ state.q=e.target.value; if(state.view==='hr'){renderHR();return;} renderList(); drawBubbles(); });
+document.getElementById('sf').addEventListener('change', function(e){ state.sf=e.target.value; renderList(); drawBubbles(); });
+
+var rt; window.addEventListener('resize', function(){ clearTimeout(rt); if(state.view!=='hr') rt=setTimeout(drawMap,200); });
+if(window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){ setTimeout(drawMap,50); }); }
+new MutationObserver(function(){ setTimeout(drawMap,50); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+setView('se');
+</script>
+
+</body></html>
